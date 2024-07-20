@@ -1,0 +1,388 @@
+<<< PROJECT PART I
+<<< -- process set (n=20) with 12 CPU-bound processes
+<<< -- seed=128; lambda=0.010000; bound=4096
+CPU-bound process A0: arrival time 45ms; 30 CPU bursts:
+==> CPU burst 196ms ==> I/O burst 79ms
+==> CPU burst 1096ms ==> I/O burst 85ms
+==> CPU burst 912ms ==> I/O burst 6ms
+==> CPU burst 1024ms ==> I/O burst 137ms
+==> CPU burst 476ms ==> I/O burst 77ms
+==> CPU burst 28ms ==> I/O burst 181ms
+==> CPU burst 184ms ==> I/O burst 570ms
+==> CPU burst 268ms ==> I/O burst 52ms
+==> CPU burst 412ms ==> I/O burst 83ms
+==> CPU burst 124ms ==> I/O burst 348ms
+==> CPU burst 208ms ==> I/O burst 27ms
+==> CPU burst 708ms ==> I/O burst 28ms
+==> CPU burst 64ms ==> I/O burst 124ms
+==> CPU burst 484ms ==> I/O burst 305ms
+==> CPU burst 208ms ==> I/O burst 11ms
+==> CPU burst 28ms ==> I/O burst 110ms
+==> CPU burst 112ms ==> I/O burst 36ms
+==> CPU burst 148ms ==> I/O burst 63ms
+==> CPU burst 304ms ==> I/O burst 208ms
+==> CPU burst 392ms ==> I/O burst 28ms
+==> CPU burst 220ms ==> I/O burst 94ms
+==> CPU burst 168ms ==> I/O burst 209ms
+==> CPU burst 252ms ==> I/O burst 174ms
+==> CPU burst 392ms ==> I/O burst 3ms
+==> CPU burst 564ms ==> I/O burst 330ms
+==> CPU burst 128ms ==> I/O burst 252ms
+==> CPU burst 284ms ==> I/O burst 1ms
+==> CPU burst 352ms ==> I/O burst 48ms
+==> CPU burst 1804ms ==> I/O burst 21ms
+==> CPU burst 500ms
+CPU-bound process A1: arrival time 47ms; 12 CPU bursts:
+==> CPU burst 632ms ==> I/O burst 38ms
+==> CPU burst 200ms ==> I/O burst 32ms
+==> CPU burst 608ms ==> I/O burst 25ms
+==> CPU burst 532ms ==> I/O burst 17ms
+==> CPU burst 100ms ==> I/O burst 66ms
+==> CPU burst 256ms ==> I/O burst 115ms
+==> CPU burst 1684ms ==> I/O burst 62ms
+==> CPU burst 600ms ==> I/O burst 101ms
+==> CPU burst 180ms ==> I/O burst 67ms
+==> CPU burst 584ms ==> I/O burst 231ms
+==> CPU burst 1032ms ==> I/O burst 94ms
+==> CPU burst 188ms
+CPU-bound process A2: arrival time 92ms; 30 CPU bursts:
+==> CPU burst 28ms ==> I/O burst 13ms
+==> CPU burst 444ms ==> I/O burst 459ms
+==> CPU burst 760ms ==> I/O burst 250ms
+==> CPU burst 92ms ==> I/O burst 59ms
+==> CPU burst 136ms ==> I/O burst 171ms
+==> CPU burst 236ms ==> I/O burst 84ms
+==> CPU burst 112ms ==> I/O burst 122ms
+==> CPU burst 284ms ==> I/O burst 25ms
+==> CPU burst 524ms ==> I/O burst 186ms
+==> CPU burst 460ms ==> I/O burst 256ms
+==> CPU burst 256ms ==> I/O burst 24ms
+==> CPU burst 280ms ==> I/O burst 172ms
+==> CPU burst 36ms ==> I/O burst 37ms
+==> CPU burst 456ms ==> I/O burst 27ms
+==> CPU burst 364ms ==> I/O burst 64ms
+==> CPU burst 32ms ==> I/O burst 7ms
+==> CPU burst 212ms ==> I/O burst 77ms
+==> CPU burst 252ms ==> I/O burst 14ms
+==> CPU burst 176ms ==> I/O burst 160ms
+==> CPU burst 108ms ==> I/O burst 214ms
+==> CPU burst 208ms ==> I/O burst 10ms
+==> CPU burst 392ms ==> I/O burst 50ms
+==> CPU burst 136ms ==> I/O burst 223ms
+==> CPU burst 752ms ==> I/O burst 37ms
+==> CPU burst 676ms ==> I/O burst 89ms
+==> CPU burst 28ms ==> I/O burst 152ms
+==> CPU burst 464ms ==> I/O burst 151ms
+==> CPU burst 604ms ==> I/O burst 95ms
+==> CPU burst 380ms ==> I/O burst 2ms
+==> CPU burst 572ms
+CPU-bound process A3: arrival time 324ms; 26 CPU bursts:
+==> CPU burst 96ms ==> I/O burst 370ms
+==> CPU burst 308ms ==> I/O burst 88ms
+==> CPU burst 12ms ==> I/O burst 63ms
+==> CPU burst 28ms ==> I/O burst 238ms
+==> CPU burst 88ms ==> I/O burst 63ms
+==> CPU burst 116ms ==> I/O burst 54ms
+==> CPU burst 580ms ==> I/O burst 5ms
+==> CPU burst 72ms ==> I/O burst 77ms
+==> CPU burst 440ms ==> I/O burst 59ms
+==> CPU burst 252ms ==> I/O burst 202ms
+==> CPU burst 300ms ==> I/O burst 96ms
+==> CPU burst 268ms ==> I/O burst 269ms
+==> CPU burst 36ms ==> I/O burst 177ms
+==> CPU burst 944ms ==> I/O burst 4ms
+==> CPU burst 256ms ==> I/O burst 27ms
+==> CPU burst 916ms ==> I/O burst 135ms
+==> CPU burst 100ms ==> I/O burst 74ms
+==> CPU burst 1240ms ==> I/O burst 71ms
+==> CPU burst 52ms ==> I/O burst 213ms
+==> CPU burst 344ms ==> I/O burst 171ms
+==> CPU burst 764ms ==> I/O burst 68ms
+==> CPU burst 60ms ==> I/O burst 115ms
+==> CPU burst 648ms ==> I/O burst 204ms
+==> CPU burst 404ms ==> I/O burst 25ms
+==> CPU burst 1704ms ==> I/O burst 50ms
+==> CPU burst 336ms
+CPU-bound process A4: arrival time 157ms; 4 CPU bursts:
+==> CPU burst 300ms ==> I/O burst 89ms
+==> CPU burst 20ms ==> I/O burst 160ms
+==> CPU burst 1248ms ==> I/O burst 24ms
+==> CPU burst 276ms
+CPU-bound process A5: arrival time 130ms; 5 CPU bursts:
+==> CPU burst 196ms ==> I/O burst 17ms
+==> CPU burst 140ms ==> I/O burst 112ms
+==> CPU burst 200ms ==> I/O burst 66ms
+==> CPU burst 60ms ==> I/O burst 106ms
+==> CPU burst 912ms
+CPU-bound process A6: arrival time 29ms; 18 CPU bursts:
+==> CPU burst 280ms ==> I/O burst 72ms
+==> CPU burst 100ms ==> I/O burst 15ms
+==> CPU burst 344ms ==> I/O burst 41ms
+==> CPU burst 756ms ==> I/O burst 118ms
+==> CPU burst 180ms ==> I/O burst 55ms
+==> CPU burst 264ms ==> I/O burst 101ms
+==> CPU burst 588ms ==> I/O burst 47ms
+==> CPU burst 84ms ==> I/O burst 17ms
+==> CPU burst 1312ms ==> I/O burst 66ms
+==> CPU burst 132ms ==> I/O burst 12ms
+==> CPU burst 780ms ==> I/O burst 20ms
+==> CPU burst 308ms ==> I/O burst 44ms
+==> CPU burst 184ms ==> I/O burst 120ms
+==> CPU burst 292ms ==> I/O burst 5ms
+==> CPU burst 1020ms ==> I/O burst 122ms
+==> CPU burst 8ms ==> I/O burst 6ms
+==> CPU burst 16ms ==> I/O burst 211ms
+==> CPU burst 1080ms
+CPU-bound process A7: arrival time 54ms; 19 CPU bursts:
+==> CPU burst 84ms ==> I/O burst 49ms
+==> CPU burst 768ms ==> I/O burst 121ms
+==> CPU burst 1388ms ==> I/O burst 89ms
+==> CPU burst 464ms ==> I/O burst 2ms
+==> CPU burst 392ms ==> I/O burst 63ms
+==> CPU burst 160ms ==> I/O burst 67ms
+==> CPU burst 140ms ==> I/O burst 147ms
+==> CPU burst 524ms ==> I/O burst 72ms
+==> CPU burst 484ms ==> I/O burst 37ms
+==> CPU burst 24ms ==> I/O burst 251ms
+==> CPU burst 376ms ==> I/O burst 2ms
+==> CPU burst 8ms ==> I/O burst 165ms
+==> CPU burst 248ms ==> I/O burst 44ms
+==> CPU burst 188ms ==> I/O burst 31ms
+==> CPU burst 136ms ==> I/O burst 103ms
+==> CPU burst 160ms ==> I/O burst 121ms
+==> CPU burst 176ms ==> I/O burst 143ms
+==> CPU burst 472ms ==> I/O burst 63ms
+==> CPU burst 40ms
+CPU-bound process A8: arrival time 62ms; 8 CPU bursts:
+==> CPU burst 420ms ==> I/O burst 54ms
+==> CPU burst 176ms ==> I/O burst 38ms
+==> CPU burst 340ms ==> I/O burst 65ms
+==> CPU burst 820ms ==> I/O burst 73ms
+==> CPU burst 184ms ==> I/O burst 48ms
+==> CPU burst 312ms ==> I/O burst 195ms
+==> CPU burst 2620ms ==> I/O burst 20ms
+==> CPU burst 112ms
+CPU-bound process A9: arrival time 41ms; 32 CPU bursts:
+==> CPU burst 360ms ==> I/O burst 40ms
+==> CPU burst 28ms ==> I/O burst 28ms
+==> CPU burst 308ms ==> I/O burst 33ms
+==> CPU burst 16ms ==> I/O burst 14ms
+==> CPU burst 644ms ==> I/O burst 51ms
+==> CPU burst 304ms ==> I/O burst 154ms
+==> CPU burst 400ms ==> I/O burst 105ms
+==> CPU burst 72ms ==> I/O burst 39ms
+==> CPU burst 316ms ==> I/O burst 40ms
+==> CPU burst 464ms ==> I/O burst 4ms
+==> CPU burst 712ms ==> I/O burst 49ms
+==> CPU burst 1680ms ==> I/O burst 32ms
+==> CPU burst 140ms ==> I/O burst 282ms
+==> CPU burst 624ms ==> I/O burst 165ms
+==> CPU burst 80ms ==> I/O burst 31ms
+==> CPU burst 1204ms ==> I/O burst 123ms
+==> CPU burst 4ms ==> I/O burst 23ms
+==> CPU burst 800ms ==> I/O burst 129ms
+==> CPU burst 112ms ==> I/O burst 181ms
+==> CPU burst 136ms ==> I/O burst 436ms
+==> CPU burst 20ms ==> I/O burst 9ms
+==> CPU burst 168ms ==> I/O burst 18ms
+==> CPU burst 1784ms ==> I/O burst 70ms
+==> CPU burst 12ms ==> I/O burst 95ms
+==> CPU burst 1928ms ==> I/O burst 52ms
+==> CPU burst 676ms ==> I/O burst 6ms
+==> CPU burst 172ms ==> I/O burst 230ms
+==> CPU burst 264ms ==> I/O burst 266ms
+==> CPU burst 988ms ==> I/O burst 6ms
+==> CPU burst 360ms ==> I/O burst 189ms
+==> CPU burst 792ms ==> I/O burst 107ms
+==> CPU burst 160ms
+CPU-bound process B0: arrival time 45ms; 19 CPU bursts:
+==> CPU burst 216ms ==> I/O burst 149ms
+==> CPU burst 1264ms ==> I/O burst 9ms
+==> CPU burst 340ms ==> I/O burst 92ms
+==> CPU burst 228ms ==> I/O burst 117ms
+==> CPU burst 604ms ==> I/O burst 37ms
+==> CPU burst 48ms ==> I/O burst 295ms
+==> CPU burst 224ms ==> I/O burst 96ms
+==> CPU burst 136ms ==> I/O burst 6ms
+==> CPU burst 948ms ==> I/O burst 2ms
+==> CPU burst 336ms ==> I/O burst 61ms
+==> CPU burst 432ms ==> I/O burst 27ms
+==> CPU burst 180ms ==> I/O burst 31ms
+==> CPU burst 28ms ==> I/O burst 102ms
+==> CPU burst 748ms ==> I/O burst 107ms
+==> CPU burst 340ms ==> I/O burst 5ms
+==> CPU burst 580ms ==> I/O burst 16ms
+==> CPU burst 312ms ==> I/O burst 2ms
+==> CPU burst 4ms ==> I/O burst 281ms
+==> CPU burst 892ms
+CPU-bound process B1: arrival time 9ms; 17 CPU bursts:
+==> CPU burst 28ms ==> I/O burst 218ms
+==> CPU burst 3004ms ==> I/O burst 139ms
+==> CPU burst 48ms ==> I/O burst 20ms
+==> CPU burst 44ms ==> I/O burst 76ms
+==> CPU burst 268ms ==> I/O burst 3ms
+==> CPU burst 64ms ==> I/O burst 209ms
+==> CPU burst 636ms ==> I/O burst 216ms
+==> CPU burst 620ms ==> I/O burst 182ms
+==> CPU burst 2136ms ==> I/O burst 179ms
+==> CPU burst 76ms ==> I/O burst 38ms
+==> CPU burst 112ms ==> I/O burst 127ms
+==> CPU burst 392ms ==> I/O burst 241ms
+==> CPU burst 256ms ==> I/O burst 183ms
+==> CPU burst 60ms ==> I/O burst 6ms
+==> CPU burst 92ms ==> I/O burst 74ms
+==> CPU burst 216ms ==> I/O burst 38ms
+==> CPU burst 492ms
+I/O-bound process B2: arrival time 46ms; 15 CPU bursts:
+==> CPU burst 122ms ==> I/O burst 520ms
+==> CPU burst 183ms ==> I/O burst 312ms
+==> CPU burst 219ms ==> I/O burst 272ms
+==> CPU burst 123ms ==> I/O burst 72ms
+==> CPU burst 7ms ==> I/O burst 48ms
+==> CPU burst 12ms ==> I/O burst 352ms
+==> CPU burst 142ms ==> I/O burst 32ms
+==> CPU burst 81ms ==> I/O burst 344ms
+==> CPU burst 28ms ==> I/O burst 600ms
+==> CPU burst 103ms ==> I/O burst 88ms
+==> CPU burst 31ms ==> I/O burst 896ms
+==> CPU burst 170ms ==> I/O burst 1256ms
+==> CPU burst 32ms ==> I/O burst 1968ms
+==> CPU burst 45ms ==> I/O burst 296ms
+==> CPU burst 6ms
+I/O-bound process B3: arrival time 271ms; 22 CPU bursts:
+==> CPU burst 51ms ==> I/O burst 2336ms
+==> CPU burst 129ms ==> I/O burst 1360ms
+==> CPU burst 4ms ==> I/O burst 152ms
+==> CPU burst 82ms ==> I/O burst 272ms
+==> CPU burst 125ms ==> I/O burst 800ms
+==> CPU burst 31ms ==> I/O burst 3152ms
+==> CPU burst 61ms ==> I/O burst 2968ms
+==> CPU burst 10ms ==> I/O burst 736ms
+==> CPU burst 89ms ==> I/O burst 448ms
+==> CPU burst 5ms ==> I/O burst 1744ms
+==> CPU burst 191ms ==> I/O burst 1256ms
+==> CPU burst 112ms ==> I/O burst 352ms
+==> CPU burst 138ms ==> I/O burst 848ms
+==> CPU burst 23ms ==> I/O burst 696ms
+==> CPU burst 35ms ==> I/O burst 3688ms
+==> CPU burst 27ms ==> I/O burst 616ms
+==> CPU burst 21ms ==> I/O burst 8ms
+==> CPU burst 87ms ==> I/O burst 576ms
+==> CPU burst 24ms ==> I/O burst 4992ms
+==> CPU burst 269ms ==> I/O burst 472ms
+==> CPU burst 150ms ==> I/O burst 2200ms
+==> CPU burst 21ms
+I/O-bound process B4: arrival time 2ms; 16 CPU bursts:
+==> CPU burst 8ms ==> I/O burst 968ms
+==> CPU burst 3ms ==> I/O burst 1096ms
+==> CPU burst 285ms ==> I/O burst 224ms
+==> CPU burst 70ms ==> I/O burst 168ms
+==> CPU burst 39ms ==> I/O burst 88ms
+==> CPU burst 205ms ==> I/O burst 584ms
+==> CPU burst 47ms ==> I/O burst 456ms
+==> CPU burst 66ms ==> I/O burst 3392ms
+==> CPU burst 44ms ==> I/O burst 1344ms
+==> CPU burst 26ms ==> I/O burst 56ms
+==> CPU burst 8ms ==> I/O burst 1792ms
+==> CPU burst 7ms ==> I/O burst 1120ms
+==> CPU burst 48ms ==> I/O burst 120ms
+==> CPU burst 404ms ==> I/O burst 192ms
+==> CPU burst 198ms ==> I/O burst 152ms
+==> CPU burst 246ms
+I/O-bound process B5: arrival time 140ms; 30 CPU bursts:
+==> CPU burst 20ms ==> I/O burst 248ms
+==> CPU burst 85ms ==> I/O burst 240ms
+==> CPU burst 20ms ==> I/O burst 424ms
+==> CPU burst 14ms ==> I/O burst 1120ms
+==> CPU burst 21ms ==> I/O burst 16ms
+==> CPU burst 24ms ==> I/O burst 152ms
+==> CPU burst 120ms ==> I/O burst 640ms
+==> CPU burst 72ms ==> I/O burst 312ms
+==> CPU burst 194ms ==> I/O burst 40ms
+==> CPU burst 14ms ==> I/O burst 520ms
+==> CPU burst 174ms ==> I/O burst 1016ms
+==> CPU burst 33ms ==> I/O burst 1816ms
+==> CPU burst 11ms ==> I/O burst 1384ms
+==> CPU burst 50ms ==> I/O burst 240ms
+==> CPU burst 12ms ==> I/O burst 1064ms
+==> CPU burst 4ms ==> I/O burst 160ms
+==> CPU burst 10ms ==> I/O burst 464ms
+==> CPU burst 454ms ==> I/O burst 472ms
+==> CPU burst 10ms ==> I/O burst 120ms
+==> CPU burst 1ms ==> I/O burst 688ms
+==> CPU burst 534ms ==> I/O burst 432ms
+==> CPU burst 7ms ==> I/O burst 200ms
+==> CPU burst 6ms ==> I/O burst 208ms
+==> CPU burst 81ms ==> I/O burst 1032ms
+==> CPU burst 5ms ==> I/O burst 216ms
+==> CPU burst 66ms ==> I/O burst 56ms
+==> CPU burst 126ms ==> I/O burst 248ms
+==> CPU burst 44ms ==> I/O burst 2336ms
+==> CPU burst 20ms ==> I/O burst 1528ms
+==> CPU burst 158ms
+I/O-bound process B6: arrival time 102ms; 5 CPU bursts:
+==> CPU burst 113ms ==> I/O burst 3224ms
+==> CPU burst 142ms ==> I/O burst 872ms
+==> CPU burst 235ms ==> I/O burst 960ms
+==> CPU burst 10ms ==> I/O burst 464ms
+==> CPU burst 46ms
+I/O-bound process B7: arrival time 30ms; 26 CPU bursts:
+==> CPU burst 71ms ==> I/O burst 3048ms
+==> CPU burst 20ms ==> I/O burst 40ms
+==> CPU burst 3ms ==> I/O burst 2960ms
+==> CPU burst 74ms ==> I/O burst 3712ms
+==> CPU burst 133ms ==> I/O burst 1272ms
+==> CPU burst 24ms ==> I/O burst 2264ms
+==> CPU burst 11ms ==> I/O burst 120ms
+==> CPU burst 140ms ==> I/O burst 656ms
+==> CPU burst 317ms ==> I/O burst 48ms
+==> CPU burst 104ms ==> I/O burst 912ms
+==> CPU burst 126ms ==> I/O burst 1088ms
+==> CPU burst 6ms ==> I/O burst 664ms
+==> CPU burst 103ms ==> I/O burst 456ms
+==> CPU burst 81ms ==> I/O burst 296ms
+==> CPU burst 141ms ==> I/O burst 1824ms
+==> CPU burst 705ms ==> I/O burst 936ms
+==> CPU burst 3ms ==> I/O burst 200ms
+==> CPU burst 186ms ==> I/O burst 1952ms
+==> CPU burst 257ms ==> I/O burst 8ms
+==> CPU burst 42ms ==> I/O burst 1000ms
+==> CPU burst 54ms ==> I/O burst 56ms
+==> CPU burst 6ms ==> I/O burst 144ms
+==> CPU burst 44ms ==> I/O burst 624ms
+==> CPU burst 19ms ==> I/O burst 272ms
+==> CPU burst 17ms ==> I/O burst 424ms
+==> CPU burst 300ms
+I/O-bound process B8: arrival time 225ms; 20 CPU bursts:
+==> CPU burst 308ms ==> I/O burst 2280ms
+==> CPU burst 18ms ==> I/O burst 128ms
+==> CPU burst 75ms ==> I/O burst 264ms
+==> CPU burst 44ms ==> I/O burst 2768ms
+==> CPU burst 56ms ==> I/O burst 1224ms
+==> CPU burst 13ms ==> I/O burst 440ms
+==> CPU burst 14ms ==> I/O burst 192ms
+==> CPU burst 32ms ==> I/O burst 424ms
+==> CPU burst 33ms ==> I/O burst 368ms
+==> CPU burst 66ms ==> I/O burst 1272ms
+==> CPU burst 23ms ==> I/O burst 48ms
+==> CPU burst 125ms ==> I/O burst 600ms
+==> CPU burst 34ms ==> I/O burst 8ms
+==> CPU burst 112ms ==> I/O burst 80ms
+==> CPU burst 14ms ==> I/O burst 520ms
+==> CPU burst 18ms ==> I/O burst 80ms
+==> CPU burst 68ms ==> I/O burst 1608ms
+==> CPU burst 62ms ==> I/O burst 2808ms
+==> CPU burst 67ms ==> I/O burst 2896ms
+==> CPU burst 64ms
+I/O-bound process B9: arrival time 95ms; 11 CPU bursts:
+==> CPU burst 22ms ==> I/O burst 608ms
+==> CPU burst 142ms ==> I/O burst 72ms
+==> CPU burst 64ms ==> I/O burst 840ms
+==> CPU burst 181ms ==> I/O burst 192ms
+==> CPU burst 240ms ==> I/O burst 384ms
+==> CPU burst 23ms ==> I/O burst 128ms
+==> CPU burst 148ms ==> I/O burst 488ms
+==> CPU burst 159ms ==> I/O burst 784ms
+==> CPU burst 77ms ==> I/O burst 1344ms
+==> CPU burst 35ms ==> I/O burst 784ms
+==> CPU burst 19ms
