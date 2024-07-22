@@ -122,6 +122,17 @@ int main(int argc, char**(argv)){
 
 	//printing output
 
+	//calculate summary and send to output file simout.txt;
+	FILE * output = fopen("simout.txt", "w");
+	if(output == NULL){
+		perror("Error opening file");
+		abort();
+	}
+	//simout.txt
+	fprintf(output,"-- number of processes: %d\n", n_processes);
+	fprintf(output,"-- number of CPU-bound processes: %d\n", n_cpu);
+	fprintf(output,"-- number of I/O-bound processes: %d\n", n_processes - n_cpu);
+
 	printf("<<< PROJECT PART I\n");
   	if (n_cpu != 1){
   		printf("<<< -- process set (n=%d) with %d CPU-bound processes\n", n_processes, n_cpu);
@@ -131,14 +142,19 @@ int main(int argc, char**(argv)){
 
   	printf("<<< -- seed=%d; lambda=%f; bound=%d\n", seed, lambda, ceiling);
 
+	double cpu_avg = 0;
+	double io_avg = 0;
+
 	for(int n = 0; n < n_processes; n++){
 		
 		Process p = *(processes + n);
 	
 		if(p.cpu_bound){
 			printf("CPU-bound process %s: arrival Time %dms; %d CPU bursts:\n", p.id, p.arrival, p.numBursts);
+			cpu_avg += *(*(p.cpu_io_bursts) + 0);
 		}else{
 			printf("I/O-bound process %s: arrival Time %dms; %d CPU bursts:\n", p.id, p.arrival, p.numBursts);
+			io_avg += *(*(p.cpu_io_bursts) + 0);
 		}
 
 		for(int b = 0; b < p.numBursts; b++){
@@ -150,6 +166,14 @@ int main(int argc, char**(argv)){
 		}
 	}
 
-	//calculate summary and send to output file simout.txt;
+	
+
+	
+	fprintf(output,"-- CPU-bound average CPU burst time: %.3f\n", cpu_avg/n_cpu);
+	fprintf(output,"-- I/O-bound average CPU burst time: %.3f\n", io_avg/(n_processes - n_cpu));
+	fprintf(output,"-- overall average CPU burst time: %.3f\n", (cpu_avg + io_avg)/n_processes);
+	
+
+
 
 }
