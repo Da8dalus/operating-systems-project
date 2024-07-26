@@ -190,6 +190,28 @@ int main(int argc, char **argv) {
 	double cpu_avg_io = cpu_io_sum / cpu_io_burst_count;
     double io_avg_io = io_io_sum / io_io_burst_count;
     double overall_avg_io = (cpu_io_sum + io_io_sum) / (cpu_io_burst_count + io_io_burst_count);
+	
+	if(cpu_burst_count == 0){
+		cpu_avg = 0.000;
+	}
+	if(io_burst_count == 0){
+		io_avg = 0.000;
+	}
+	if(cpu_io_burst_count == 0){
+		cpu_avg_io = 0.000;
+	}
+	if(io_io_burst_count == 0){
+		io_avg_io = 0.000;
+	}
+	if(cpu_burst_count + io_burst_count == 0){
+		overall_avg = 0.000;
+	}
+	if(cpu_io_burst_count + io_io_burst_count == 0){
+		overall_avg_io = 0.000;
+	}
+	
+		
+	
 
 
     // Write summary to simout.txt
