@@ -61,6 +61,11 @@ void createProcess(Process * p, char* id, bool bound, int numBursts, double lamb
 
 }
 
+double round_up(double value, int decimal_places) {
+    double factor = pow(10, decimal_places);
+    return ceil(value * factor) / factor;
+}
+
 int main(int argc, char **argv) {
     if (argc != 6) {
         fprintf(stderr, "Invalid amount of arguments\n");
@@ -119,9 +124,13 @@ int main(int argc, char **argv) {
     }
 
     double cpu_sum = 0;
-    double io_sum = 0;
+	double io_sum = 0;
+    double cpu_io_sum = 0; 
+	double io_io_sum = 0;
     int cpu_burst_count = 0;
-    int io_burst_count = 0;
+	int io_burst_count = 0;
+    int cpu_io_burst_count = 0; 
+	int io_io_burst_count = 0;
 
     printf("<<< PROJECT PART I\n");
     if (n_cpu != 1) {
@@ -144,6 +153,13 @@ int main(int argc, char **argv) {
             printf("==> CPU burst %dms", *(*(p.cpu_io_bursts + b) + 0));
             if (b < p.numBursts - 1) {
                 printf(" ==> I/O burst %dms", *(*(p.cpu_io_bursts + b) + 1));
+                if (p.cpu_bound) {
+                    cpu_io_sum += *(*(p.cpu_io_bursts + b) + 1);
+                    cpu_io_burst_count++;
+                } else {
+                    io_io_sum += *(*(p.cpu_io_bursts + b) + 1);
+                    io_io_burst_count++;
+                }
             }
             printf("\n");
 
@@ -157,10 +173,16 @@ int main(int argc, char **argv) {
         }
     }
 
+
     // Calculate averages
     double cpu_avg = cpu_sum / cpu_burst_count;
     double io_avg = io_sum / io_burst_count;
     double overall_avg = (cpu_sum + io_sum) / (cpu_burst_count + io_burst_count);
+	
+	double cpu_avg_io = cpu_io_sum / cpu_io_burst_count;
+    double io_avg_io = io_io_sum / io_io_burst_count;
+    double overall_avg_io = (cpu_io_sum + io_io_sum) / (cpu_io_burst_count + io_io_burst_count);
+
 
     // Write summary to simout.txt
     fprintf(output, "-- number of processes: %d\n", n_processes);
@@ -169,6 +191,9 @@ int main(int argc, char **argv) {
     fprintf(output, "-- CPU-bound average CPU burst time: %.3f ms\n", cpu_avg);
     fprintf(output, "-- I/O-bound average CPU burst time: %.3f ms\n", io_avg);
     fprintf(output, "-- overall average CPU burst time: %.3f ms\n", overall_avg);
+	fprintf(output, "-- CPU-bound average I/O burst time: %.3f ms\n", round_up(cpu_avg_io, 3));
+    fprintf(output, "-- I/O-bound average I/O burst time: %.3f ms\n", round_up(io_avg_io, 3));
+    fprintf(output, "-- overall average I/O burst time: %.3f ms\n", round_up(overall_avg_io, 3));
 
     fclose(output);
 }
