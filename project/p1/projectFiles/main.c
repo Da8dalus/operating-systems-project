@@ -144,9 +144,17 @@ int main(int argc, char **argv) {
         Process p = *(processes + n);
 
         if (p.cpu_bound) {
+			if(p.numBursts > 1){
             printf("CPU-bound process %s: arrival time %dms; %d CPU bursts:\n", p.id, p.arrival, p.numBursts);
+			}else{
+				printf("CPU-bound process %s: arrival time %dms; %d CPU burst:\n", p.id, p.arrival, p.numBursts);
+			}
         } else {
+			if(p.numBursts > 1){
             printf("I/O-bound process %s: arrival time %dms; %d CPU bursts:\n", p.id, p.arrival, p.numBursts);
+			}else{
+				printf("I/O-bound process %s: arrival time %dms; %d CPU burst:\n", p.id, p.arrival, p.numBursts);
+			}
         }
 
         for (int b = 0; b < p.numBursts; b++) {
@@ -188,10 +196,10 @@ int main(int argc, char **argv) {
     fprintf(output, "-- number of processes: %d\n", n_processes);
     fprintf(output, "-- number of CPU-bound processes: %d\n", n_cpu);
     fprintf(output, "-- number of I/O-bound processes: %d\n", n_processes - n_cpu);
-    fprintf(output, "-- CPU-bound average CPU burst time: %.3f ms\n", cpu_avg);
-    fprintf(output, "-- I/O-bound average CPU burst time: %.3f ms\n", io_avg);
-    fprintf(output, "-- overall average CPU burst time: %.3f ms\n", overall_avg);
-	fprintf(output, "-- CPU-bound average I/O burst time: %.3f ms\n", round_up(cpu_avg_io, 3));
+    fprintf(output, "-- CPU-bound average CPU burst time: %.3f ms\n", round_up(cpu_avg, 3));
+    fprintf(output, "-- I/O-bound average CPU burst time: %.3f ms\n", round_up(io_avg, 3));
+    fprintf(output, "-- overall average CPU burst time: %.3f ms\n", round_up(overall_avg, 3));
+    fprintf(output, "-- CPU-bound average I/O burst time: %.3f ms\n", round_up(cpu_avg_io, 3));
     fprintf(output, "-- I/O-bound average I/O burst time: %.3f ms\n", round_up(io_avg_io, 3));
     fprintf(output, "-- overall average I/O burst time: %.3f ms\n", round_up(overall_avg_io, 3));
 
