@@ -209,10 +209,6 @@ int main(int argc, char **argv) {
 	if(cpu_io_burst_count + io_io_burst_count == 0){
 		overall_avg_io = 0.000;
 	}
-	
-		
-	
-
 
     // Write summary to simout.txt
     fprintf(output, "-- number of processes: %d\n", n_processes);
