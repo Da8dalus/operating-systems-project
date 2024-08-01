@@ -1,0 +1,14 @@
+# test _2 --- 5pts
+p2.out 3 1 32 0.001 1024 4 0.75 256 > p2output02.txt
+mv simout.txt simout02.txt
+
+# test _3 --- 5pts
+p2.out 8 6 512 0.001 1024 6 0.9 128 > p2output03.txt
+mv simout.txt simout03.txt
+
+# test _4 --- 6pts
+p2.out 16 2 256 0.001 2048 4 0.5 32 > p2output04.txt
+mv simout.txt simout04.txt
+
+# test _5 --- 6pts
+p2.out 20 12 128 0.01 4096 4 0.96 64 > p2output05.txt
