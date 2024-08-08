@@ -76,6 +76,7 @@ void * wordle_gameplay(void * arg){
             break;
         }
 
+        memset(buffer, 0, 6);
 
         int n = read(client_fd, buffer, 5);
 
@@ -208,24 +209,23 @@ void * wordle_gameplay(void * arg){
             // char*package = calloc(8, sizeof(char));
             snprintf(package, 8, "%c%s%04X", valid,results, attempts_left);
             write(client_fd, package, 8);
-
-            if(*(valid) == 'Y'){
-                printf("Thread %lu: sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
-            }else{
-                printf("Thread %lu: invalid guess; sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
-            }
-            
-
-            if(winner || disconnect_signal == 1){
-                break;
-            }
         }
+        if(valid == 'Y'){
+            printf("Thread %lu: sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
+        }else{
+            printf("Thread %lu: invalid guess; sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
+        }
+        
+
+        if(winner || disconnect_signal == 1){
+            break;
+        }
+        
     }
 
     free(buffer);
     free(copyHelp);
     free(package);
-    free(valid);
     free(results);
 
 
@@ -389,14 +389,14 @@ int wordle_server( int argc, char ** argv ){
     }
 
     
-    for(int i = 1; i < tids_count; i++){
+    // for(int i = 1; i < tids_count; i++){
 
-		int * rc;
-		if (pthread_join(*(tids + i), (void **)&rc) != 0) {
-        	perror("pthread_join failed");
-        	return EXIT_FAILURE;
-    	}
-    }
+	// 	int * rc;
+	// 	if (pthread_join(*(tids + i), (void **)&rc) != 0) {
+    //     	perror("pthread_join failed");
+    //     	return EXIT_FAILURE;
+    // 	}
+    // }
 
     free(tids);
 
