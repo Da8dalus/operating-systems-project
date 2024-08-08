@@ -204,7 +204,7 @@ void * wordle_gameplay(void * arg){
             if(disconnect_signal == 1){
                 break;
             }
-    //
+    
             // char*package = calloc(8, sizeof(char));
             snprintf(package, 8, "%c%s%04X", valid,results, attempts_left);
             write(client_fd, package, 8);
