@@ -32,8 +32,11 @@ struct threadNeeded{
 };
 
 void disconnect(int signum){
+    pthread_mutex_lock(&mutex);
     disconnect_signal = 1;
     longjmp(env, 1);
+    pthread_mutex_unlock(&mutex);
+    
 }
 
 
@@ -49,18 +52,17 @@ bool find(char* guess){
 void * wordle_gameplay(void * arg){
 
     struct threadNeeded *details = (struct threadNeeded*)arg;
-    char* target_word = calloc(5, sizeof(char));
+    char* target_word = calloc(6, sizeof(char));
     strcpy(target_word, details->target_word);
     int client_fd = details->clientfd;
 
     free(details);
 
 
-    int attempts_left = 6;
-    char * valid = calloc(1, sizeof(char));
-    char * results = calloc(5, sizeof(char));
-    short* guess_remainding = calloc(1, sizeof(short));
-    char* copyHelp = calloc(5, sizeof(char));
+    short attempts_left = 6;
+    char valid;
+    char * results = calloc(6, sizeof(char));
+    char* copyHelp = calloc(6, sizeof(char));
     char*package = calloc(8, sizeof(char));
     char* buffer = calloc(6, sizeof(char));
 
@@ -74,7 +76,6 @@ void * wordle_gameplay(void * arg){
             break;
         }
 
-        // char* buffer = calloc(6, sizeof(char));
 
         int n = read(client_fd, buffer, 5);
 
@@ -88,9 +89,7 @@ void * wordle_gameplay(void * arg){
             free(target_word);
             free(copyHelp);
             free(package);
-            free(valid);
             free(results);
-            free(guess_remainding);
             
             close(client_fd);
             pthread_exit((void*) EXIT_FAILURE);
@@ -101,9 +100,7 @@ void * wordle_gameplay(void * arg){
             free(target_word);
             free(copyHelp);
             free(package);
-            free(valid);
             free(results);
-            free(guess_remainding);
 
 
             pthread_mutex_lock(&mutex);
@@ -123,34 +120,30 @@ void * wordle_gameplay(void * arg){
 
         printf("Thread %lu: rcvd guess: %s\n", pthread_self(), buffer);
     
-        // char * valid = calloc(1, sizeof(char));
-        // char * results = calloc(5, sizeof(char));
-        // short* guess_remainding = calloc(1, sizeof(short));
 
         if(!find(buffer)){
             if(disconnect_signal == 1){
                 break;
             }
 
-            *(valid) = 'N';
+            valid = 'N';
 
             *(results + 0) = '?';
             *(results + 1) = '?';
             *(results + 2) = '?';
             *(results + 3) = '?';
             *(results + 4) = '?';
+            *(results + 5) = '\0';
 
-            *(guess_remainding) = (short)attempts_left;
         }else{
 
             if(disconnect_signal == 1){
                 break;
             }
 
-            *(valid) = 'Y';
+            valid = 'Y';
 
             attempts_left = attempts_left - 1;
-            *(guess_remainding) = (short)attempts_left;
 
             pthread_mutex_lock(&mutex);
             total_guesses = total_guesses + 1;
@@ -179,6 +172,7 @@ void * wordle_gameplay(void * arg){
                 *(results + 2) = '-';
                 *(results + 3) = '-';
                 *(results + 4) = '-';
+                *(results + 5) = '\0';
                 
                 if(disconnect_signal == 1){
                     break;
@@ -204,10 +198,6 @@ void * wordle_gameplay(void * arg){
                         }
                     }
                 }
-
-                if(disconnect_signal == 1){
-                    break;
-                }
                 
             }
 
@@ -216,13 +206,13 @@ void * wordle_gameplay(void * arg){
             }
 
             // char*package = calloc(8, sizeof(char));
-            snprintf(package, 8, "%c%s%d", *(valid),results, *(guess_remainding));
+            snprintf(package, 8, "%c%s%04X", valid,results, attempts_left);
             write(client_fd, package, 8);
 
             if(*(valid) == 'Y'){
-                printf("Thread %lu: sending reply: %s (%d guesses left)\n", pthread_self(), results, *(guess_remainding));
+                printf("Thread %lu: sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
             }else{
-                printf("Thread %lu: invalid guess; sending reply: %s (%d guesses left)\n", pthread_self(), results, *(guess_remainding));
+                printf("Thread %lu: invalid guess; sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
             }
             
 
@@ -237,7 +227,6 @@ void * wordle_gameplay(void * arg){
     free(package);
     free(valid);
     free(results);
-    free(guess_remainding);
 
 
 
@@ -318,16 +307,17 @@ int wordle_server( int argc, char ** argv ){
 
     printf("MAIN: opened %s (%s words)\n", *(argv + 3), *(argv + 4));
 
-    char * output = (char*)malloc((5) * sizeof(char));
+    char * output = (char*)malloc((6) * sizeof(char));
     int rc = 1;
     rc = read(fd, output, 5);
     int word_index = 0;
     while(rc > 0 && word_index < atoi(*(argv + 4))){
-        *(dictionary + word_index) = calloc(5, sizeof(char));
+        *(output + 5) = '\0';
+        *(dictionary + word_index) = calloc(6, sizeof(char));
         strcpy(*(dictionary + word_index), output);
         word_index++;
-        lseek(fd, 1, SEEK_CUR);
-        rc = read(fd, output, 5);
+        // lseek(fd, 1, SEEK_CUR);
+        rc = read(fd, output, 6);
     }
     free(output);
 
@@ -356,11 +346,12 @@ int wordle_server( int argc, char ** argv ){
         printf( "SERVER: Accepted new client connection on newsd %d\n", newsd );
 
         // create hidden word
-        char* target_word = calloc(5, sizeof(char));
+        char* target_word = calloc(6, sizeof(char));
         srand48(atoi(*(argv + 2)));
 
         int dictionary_index = rand() % (atoi(*(argv + 4))-1);
         strcpy(target_word, *(dictionary + dictionary_index));
+        *(target_word + 5) = '\0';
 
         //add hidden word to words
         pthread_mutex_lock(&mutex);
@@ -374,7 +365,7 @@ int wordle_server( int argc, char ** argv ){
         }
         words = temp;
         target_word_count++;
-        *(words + target_word_count - 1) = calloc(5, sizeof(char));
+        *(words + target_word_count - 1) = calloc(6, sizeof(char));
         strcpy(*(words + target_word_count - 1), target_word);
         pthread_mutex_unlock(&mutex);
         
