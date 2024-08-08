@@ -42,9 +42,12 @@ void disconnect(int signum){
 
 bool find(char* guess){
     for(int i = 0; i < dicitonary_count; i++){
+        pthread_mutex_lock(&mutex);
         if(strcasecmp(*(dictionary + i), guess) == 0){
+            pthread_mutex_unlock(&mutex);
             return true;
         }
+         pthread_mutex_unlock(&mutex);
     }
     return false;
 }
@@ -207,9 +210,12 @@ void * wordle_gameplay(void * arg){
             }
     
             // char*package = calloc(8, sizeof(char));
-            snprintf(package, 8, "%c%s%04X", valid,results, attempts_left);
-            write(client_fd, package, 8);
+            
         }
+
+        snprintf(package, 8, "%c%s%04X", valid,results, attempts_left);
+        write(client_fd, package, 8);
+
         if(valid == 'Y'){
             printf("Thread %lu: sending reply: %s (%04X guesses left)\n", pthread_self(), results, attempts_left);
         }else{
