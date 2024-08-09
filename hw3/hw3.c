@@ -1,502 +1,370 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/types.h>
+#include <sys/select.h>
 #include <pthread.h>
-#include <stdbool.h>
-#include <signal.h>
+#include <sys/stat.h>
 #include <fcntl.h>
-#include <setjmp.h>
 #include <ctype.h>
+#include <signal.h>
+#include <stdbool.h>
 
 extern int total_guesses;
 extern int total_wins;
 extern int total_losses;
 extern char ** words;
 
-char** dictionary;
-int dicitonary_count;
+char ** dictionary;
+int num_words;
+int num_targets;
+
 pthread_mutex_t mutex;
-int disconnect_signal;
-jmp_buf env;
+pthread_t * client_threads;
+int num_threads;
+int * client_newsds;
+bool run_server = true;
 
 
-struct threadNeeded{
-    char* target_word;
-    int clientfd;
-    // int* signalfd;
-};
+int validity(char * guess, int pos, char * target_word){
+	// if same; return 0
+	if( *(guess + pos) == *(target_word + pos) ){
+		return 0;
+	}
 
-void disconnect(int signum){
-    pthread_mutex_lock(&mutex);
-    disconnect_signal = 1;
-    pthread_mutex_unlock(&mutex);
-    longjmp(env, 1);
-    
+	int wrongLetter = 0, wrongGuess = 0, i;
+	for( i = 0; i < 5; i++ ) {
+		if( *(guess + pos) == *(target_word + i) && *(guess + i) != *(guess + pos)){
+			wrongLetter++;
+		}
+		if (i <= pos) {
+			if( *(guess + i) == *(guess + pos) && *(target_word + i) != *(guess + pos) )
+				wrongGuess++;
+		}
+		if(i >= pos) {
+			if(wrongGuess == 0)
+				break;
+			if(wrongGuess <= wrongLetter)
+				return 1;
+		}
+	}
+	
+	return 2;
 }
 
 
-bool find(char* guess){
-    for(int i = 0; i < dicitonary_count; i++){
-        pthread_mutex_lock(&mutex);
-        // printf("%s\n", *(dictionary + i));
-        if(strcasecmp(*(dictionary + i), guess) == 0){
-            pthread_mutex_unlock(&mutex);
-            return true;
-        }
-         pthread_mutex_unlock(&mutex);
-    }
-    return false;
+void signal_ender( int sig ) {
+	run_server = false;
+
+	printf("MAIN: SIGUSR1 rcvd; Wordle server shutting down...\n");
+	printf("MAIN:MAIN: valid guesses: %d\n", total_guesses);
+	printf("MAIN:MAIN: win/loss: %d/%d\n", total_wins, total_losses);
+	for (int i = 0; i < num_targets; i++ ){
+		printf("MAIN:MAIN: word #%d: %s\n", i+1, *(words + i));
+	}
 }
 
-void * wordle_gameplay(void * arg){
+void * wordle_gameplay( void * arg ){
+    // printf("are yu here\n");
 
-    struct threadNeeded *details = (struct threadNeeded*)arg;
-    char* target_word = calloc(6, sizeof(char));
-    strcpy(target_word, details->target_word);
-    int client_fd = details->clientfd;
-
-    free(details);
-
-
-    short attempts_left = 6;
+	char * target_word = calloc(6, sizeof(char));
+   
+    //get target word and put into words array
+    // printf("num words : %d\n", num_words);
+	int random_index = rand() % num_words;
     
-    char * results = calloc(6, sizeof(char));
-    char* copyHelp = calloc(6, sizeof(char));
-    char*package = calloc(8, sizeof(char));
-    char* buffer = calloc(6, sizeof(char));
-
-
-    bool winner = false;
-    while(attempts_left > 0 && disconnect_signal == 0 && !winner){
-
-        printf("THREAD %lu: waiting for guess\n",pthread_self());
-
-        if(disconnect_signal == 1){
-            break;
-        }
-
-        memset(buffer, 0, 6);
-        memset(package, 0, 8);
-        char valid;
-        int n = read(client_fd, buffer, 5);
-
-
-        if(disconnect_signal == 1){
-            break;
-        }
-
-        if (n < 0) {
-            perror("ERROR: read() failed");
-            free(buffer);
-            free(target_word);
-            free(copyHelp);
-            free(package);
-            free(results);
-            
-            close(client_fd);
-            pthread_exit(NULL);
-        }
-        if(n == 0){
-            printf("THREAD %lu:  client gave up; closing TCP connection...\n",pthread_self());
-            free(buffer);
-            free(target_word);
-            free(copyHelp);
-            free(package);
-            free(results);
-
-
-            pthread_mutex_lock(&mutex);
-            total_losses = total_losses + 1;
-            pthread_mutex_unlock(&mutex);
-
-            close(client_fd);
-            pthread_exit(NULL);
-        }
-
-        *(buffer + 5) = '\0';
-
-
-
-        if(disconnect_signal == 1){
-            break;
-        }
-
-
-        printf("THREAD %lu: rcvd guess: %s\n", pthread_self(), buffer);
-        
-
-        if(!find(buffer)){
-            if(disconnect_signal == 1){
-                break;
-            }
-
-            valid = 'N';
-
-            *(results + 0) = '?';
-            *(results + 1) = '?';
-            *(results + 2) = '?';
-            *(results + 3) = '?';
-            *(results + 4) = '?';
-            *(results + 5) = '\0';
-
-            results = realloc(results, 5 * sizeof(char));
-            *(package) = valid;
-            *(short *)(package + 1) = htons(attempts_left);
-            *(char *)(package + 3) = *(results + 0);
-            *(char *)(package + 4) = *(results + 1);
-            *(char *)(package + 5) = *(results + 2);
-            *(char *)(package + 6) = *(results + 3);
-            *(char *)(package + 7) = *(results + 4);
-
-            send(client_fd, package, 9,0);
-
-
-        }else{
-
-            if(disconnect_signal == 1){
-                break;
-            }
-
-            valid = 'Y';
-
-            attempts_left = attempts_left - 1;
-
-            pthread_mutex_lock(&mutex);
-            total_guesses = total_guesses + 1;
-            pthread_mutex_unlock(&mutex);
-
-
-
-            //see validity
-            if(strcasecmp(buffer, target_word) == 0){
-                *(results + 0) = toupper(*(buffer + 0));
-                *(results + 1) = toupper(*(buffer + 1));
-                *(results + 2) = toupper(*(buffer + 2));
-                *(results + 3) = toupper(*(buffer + 3));
-                *(results + 4) = toupper(*(buffer + 4));
-                *(results + 5) = '\0';
-                pthread_mutex_lock(&mutex);
-                total_wins = total_wins + 1;
-                pthread_mutex_unlock(&mutex);
-                winner = true;
-            }else{
-
-                if(disconnect_signal == 1){
-                    break;
-                }
-
-                strcpy(copyHelp, target_word);
-                // printf("%s : %s\n", copyHelp, target_word);
-
-                *(results + 0) = '-';
-                *(results + 1) = '-';
-                *(results + 2) = '-';
-                *(results + 3) = '-';
-                *(results + 4) = '-';
-                *(results + 5) = '\0';
-                
-                if(disconnect_signal == 1){
-                    break;
-                }
-
-                for(int i = 0; i < 5; i++){
-                    // printf("%c : %c\n",*(copyHelp + i),*(buffer + i));
-                    if(tolower(*(copyHelp + i)) == tolower(*(buffer + i))){
-                        *(results + i) = toupper(*(buffer + i));
-                        *(copyHelp + i) = '-';
-                        *(buffer + i) = '-';
-                    }
-                }
-
-                for(int i = 0; i < 5; i++){
-                    if(*(buffer + i) == '-'){
-                        continue;
-                    }
-                    for(int j = 0; j < 5; j++){
-                        if(tolower(*(buffer + i)) == tolower(*(copyHelp + j))){
-                            *(results + i) = tolower(*(buffer + i));
-                            *(copyHelp + j) = '-';
-                            j = 5;
-                        }
-                    }
-                }
-                
-            }
-
-            if(disconnect_signal == 1){
-                break;
-            }
-    
-            
-        
-
-            results = realloc(results, 5 * sizeof(char));
-
-            // unsigned short attempts_encoded = htons(attempts_left);
-            *(package) = valid;
-            *(short *)(package + 1) = htons(attempts_left);
-            *(char *)(package + 3) = *(results + 0);
-            *(char *)(package + 4) = *(results + 1);
-            *(char *)(package + 5) = *(results + 2);
-            *(char *)(package + 6) = *(results + 3);
-            *(char *)(package + 7) = *(results + 4);
-            
-            send(client_fd, package, 9,0);
-        }
-
-    
-        
-
-        if(valid == 'Y'){
-            if(attempts_left == 1){
-                printf("THREAD %lu: sending reply: %s (%01X guess left)\n", pthread_self(), results, attempts_left);
-            }else{
-                printf("THREAD %lu: sending reply: %s (%01X guesses left)\n", pthread_self(), results, attempts_left);
-            }
-            
-        }else{
-            if(attempts_left == 1){
-                printf("THREAD %lu: invalid guess; sending reply: %s (%01X guess left)\n", pthread_self(), results, attempts_left);
-            }else{
-                printf("THREAD %lu: invalid guess; sending reply: %s (%01X guesses left)\n", pthread_self(), results, attempts_left);
-            }
-        }
-        
-        
+	strcpy(target_word, *(dictionary+random_index));
+	
+	words = realloc( words, sizeof(char *) * (num_targets + 2) );
+	*(words + num_targets) = calloc(6, sizeof(char));
+	strcpy(*(words + num_targets), target_word);
+    // printf("are yu here\n");
+	
+	for( int i = 0; i < 6; i++ ){
+		*(*(words + num_targets)+i) = toupper( *(*(words + num_targets)+i) );
     }
-    
+	num_targets++;
 
-    free(buffer);
-    free(copyHelp);
-    free(package);
-    free(results);
+    //start actual game
+	int * newsock_fd = (int *)arg;
+	int * rc = calloc( 1, sizeof( int ) );
+	char * guess = calloc(6, sizeof(char));
+	int guesses = 0;
 
+    // printf("do we get here?\n");
 
+    //start the actual game
+	while(1){
+        // printf("or do we get here?\n");
+		printf("THREAD %lu: waiting for guess\n", pthread_self());
 
-    if(disconnect_signal == 0){
-        if(!winner){
-            pthread_mutex_lock(&mutex);
-            total_losses = total_losses + 1;
-            pthread_mutex_unlock(&mutex);
-        }
-        printf("THREAD %lu: game over! word was %s!\n", pthread_self(), target_word);
+		int recv_rc = recv( *newsock_fd, guess, 5, MSG_WAITALL );
+		if (recv_rc == 0) {
+			// Client has closingthe connection
+			printf("THREAD %lu: client gave up; closing TCP connection...\n", pthread_self());
+			total_losses++;
+			break;
+		} 
+		else if( recv_rc == -1) {
+			fprintf(stderr, "ERROR: failed to recieve from client\n");
+			pthread_exit( NULL );
+		}
+		printf("THREAD %lu: rcvd guess: %s\n", pthread_self(), guess);
+		// Lock mutex until guess is processed
+		pthread_mutex_lock(&mutex);
+
+		char * copy = calloc(6, sizeof(char));
+		void * package = calloc(9, sizeof(char)); // 1 byte
+
+		//Check if valid guess
+        bool found = false;
+		for( int i = 0; i < num_words; i++ ){
+			if( strcmp(*(dictionary + i), guess) == 0) {
+                found = true;
+				break;
+			}
+		}
         
+
+
+        //Invalid word
+		if(!found){
+            // printf("not found\n");
+			printf("THREAD %lu: invalid guess; sending reply: ????? (%d guess%s left)\n", pthread_self(), 6 - guesses, guesses == 5 ? "" : "es");
+			memcpy( package, "N", 1);
+			*(short*)( package + 1 ) = htons(6 - guesses);
+			memcpy( package + 3, "?????", 5);
+
+			send( *newsock_fd, package, 9, 0 );
+		}else{//valid word
+        // printf("found");
+			total_guesses++;
+			guesses++;
+			memcpy( package, "Y", 1);
+			*(short*)( package + 1 ) = htons(6 - guesses);
+
+
+            //is guess target?
+			if( !strcmp(guess, target_word)){
+                for( int i = 0; i < 5; i++ ){
+                    *(copy + i) = toupper( *(guess+i) );
+                }
+            }
+
+            
+            //guess not target -> how much right?
+            for(int i = 0; i < 5; i++) {
+                int c = validity(guess, i, target_word);
+                if( c == 0 ){
+                    *(copy + i) = toupper( *(guess+i) );
+                } else if( c == 1 ){
+                    *(copy + i) = tolower( *(guess+i) );
+                } else if ( c == 2 ){
+                    *(copy + i) = '-';
+                }
+            }
+
+			memcpy( package + 3, copy, 5);
+
+			printf("THREAD %lu: sending reply: %s (%d guess%s left)\n", pthread_self(), copy, 6 - guesses, guesses == 5 ? "" : "es");
+			send( *newsock_fd, package, 9, 0 );
+		}
+		// Guess is processed; unlock mutex
+		pthread_mutex_unlock(&mutex);
+
+		free( copy );
+		free( package );
+
+		if( strcmp(guess, target_word) == 0){
+			total_wins++;
+			break;
+		}
+		if( guesses == 6 ){
+			total_losses++;
+			break;
+		}
+	}
+	
+	for( int i = 0; i < 5; i++ ){
+		*(target_word + i) = toupper( *(target_word+i) );
     }
+	printf("THREAD %lu: game over; word was %s!\n", pthread_self(), target_word);
+	
+	free(guess);
+	free(target_word);
+	close(*newsock_fd);
 
-    free(target_word);
-    close(client_fd);
-    pthread_exit(NULL);
-
-    
+	pthread_exit( rc );
 }
+
 
 int wordle_server( int argc, char ** argv ){
-    setvbuf( stdout, NULL, _IONBF, 0 );
-
-    signal(SIGINT, SIG_IGN);
-    signal(SIGTERM, SIG_IGN);
-    signal(SIGUSR2, SIG_IGN);
-
-    signal(SIGUSR1, disconnect);
-
-    disconnect_signal = 0;
 
 
-    if(argc != 5){
-        perror("ERROR: Invalid argument(s)\nUSAGE: hw3.out <listener-port> <seed> <dictionary-filename> <num-words>");
+    // Set up signal routine
+	signal( SIGUSR1, signal_ender );
+	signal( SIGINT, SIG_IGN );
+	signal( SIGTERM, SIG_IGN );
+	signal( SIGUSR2, SIG_IGN );
+
+    total_guesses = 0;
+	total_wins = 0;
+	total_losses = 0;
+	num_targets = 0;
+
+	if(argc != 5){
+		fprintf(stderr, "ERROR: Invalid argument(s)\n");
+		fprintf(stderr, "USAGE: hw3.out <listener-port> <seed> <dictionary-filename> <num-words>\n");
         return EXIT_FAILURE;
-    }
+	}
 
-    /* Create the listener socket as TCP socket (SOCK_STREAM) */
-    int listener = socket( AF_INET, SOCK_STREAM, 0 );
-                                /* here, SOCK_STREAM indicates TCP */
+	setvbuf( stdout, NULL, _IONBF, 0);
 
-    if ( listener == -1 ) { perror( "socket() failed" ); return EXIT_FAILURE; }
 
-    /* populate the socket structure for bind() */
-    struct sockaddr_in tcp_server;
-    tcp_server.sin_family = AF_INET;   /* IPv4 */
 
-    tcp_server.sin_addr.s_addr = htonl( INADDR_ANY );
-    /* allow any remote IP address to connect to our socket */
+    //create and read in dicitonary
+	int fd = open(*(argv+3), O_RDONLY);
+	dictionary = calloc(atoi(*(argv+4)), sizeof(char*));
+    num_words = atoi(*(argv+4));
+	for( int i = 0; i < atoi(*(argv+4)); i++ ) {
+		*(dictionary + i) = calloc(6, sizeof(char));
+		read(fd, *(dictionary + i), 5);
+		lseek(fd, 1, SEEK_CUR);
+	}
 
-    int  port = atoi( *(argv + 1) );  /* user provides port number */
 
-    // printf("%d\n", port);
-    tcp_server.sin_port = htons( port );
-
-    if ( bind( listener, (struct sockaddr *)&tcp_server, sizeof( tcp_server ) ) == -1 ){
-        perror( "bind() failed" );
-        return EXIT_FAILURE;
-    }
-
-    /* identify our port number as a TCP listener port */
-    if ( listen( listener, 5 ) == -1 ){
-        perror( "listen() failed" );
-        return EXIT_FAILURE;
-    }
-
-    //put dictionary into an array
-    dictionary = calloc(atoi(*(argv + 4)), sizeof(char*));
-    dicitonary_count = atoi(*(argv + 4));
-
-    int fd = open(*(argv + 3), O_RDONLY);
-    if (fd == -1){
-        free(dictionary);
-        perror("open() failed");
-        return EXIT_FAILURE;
-    }
-
-    printf("MAIN: opened %s (%s words)\n", *(argv + 3), *(argv + 4));
+    // for( int i = 0; i < atoi(*(argv+4)); i++ ) {
+	// 	printf("%s\n",*(dictionary + i));
+    // }
     
-    char * output = calloc(7, sizeof(char));
-    int rc = 0;
-    rc = read(fd, output, 7);
-    if(rc == -1){
-        free(output);
-        free(dictionary);
-        perror("read) failed");
-        return EXIT_FAILURE;  
-    }
+
+	printf("MAIN: opened %s (%d words)\n",  *(argv+3),  atoi(*(argv+4)));
+
+	int seed = atoi( *(argv+2) );
+	srand( seed );
+	printf("MAIN: seeded pseudo-random number generator with %d\n", seed);
+
+	
+	
+    //Build server
+
+	    // Create socket
     
-    int word_index = 0;
-    while(rc > 0 && word_index < atoi(*(argv + 4))){
-        output = realloc(output, 6 * sizeof(char));
-        *(dictionary + word_index) = calloc(6, sizeof(char));
-        strncpy(*(dictionary + word_index), output, 5);
-        word_index++;
-        free(output);
-        output = calloc(7, sizeof(char));
-        rc = read(fd, output, 7);
-        if(rc == -1){
-            free(output);
-            for (int i = 0; i < dicitonary_count; i++) {
+    struct sockaddr_in my_addr, client_addr;
+	int listener = socket(AF_INET, SOCK_STREAM, 0);
+	if(listener == -1){
+		perror("socket() failed");
+		return EXIT_FAILURE;
+	}
+
+	    // Bind to a port number
+	short port = atoi(*(argv+1));
+
+	memset(&my_addr, 0, sizeof(struct sockaddr_in));
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_port = htons(port);
+
+	if( bind(listener, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in)) < 0){
+		perror("bind() failed");
+        for( int i = 0; i < atoi(*(argv+4)); i++ ) {
+            if(*(dictionary + i) == NULL){
+                continue;
+            }
+            free(*(dictionary + i));
+        }
+        free(dictionary);
+		return EXIT_FAILURE;
+	}
+
+	// Initialize the mutex
+	pthread_mutex_init(&mutex, NULL);
+
+	// pthread_t array to keep threads
+	num_threads = 0;
+	client_threads = calloc(128, sizeof(pthread_t));
+	client_newsds = calloc(128, sizeof(int));
+	
+	if(listen(listener, 5) == -1){
+		perror("listen() failed\n");
+        for( int i = 0; i < atoi(*(argv+4)); i++ ) {
+            if(*(dictionary + i) == NULL){
+                continue;
+            }
+            free(*(dictionary + i));
+        }
+        free(dictionary);
+        free(client_threads);
+        free(client_newsds);
+
+		return EXIT_FAILURE;
+	}
+
+	printf("MAIN: Wordle server listening on port {%d}\n", port);
+
+	while(run_server){
+		//Set up connection request
+		socklen_t client_len = sizeof(client_addr);
+		int newsfd = accept(listener, (struct sockaddr *)&client_addr, &client_len);
+		printf("MAIN: rcvd incoming connection request\n");
+
+		*(client_newsds + num_threads) = newsfd;
+
+		if(newsfd == -1){
+			fprintf(stderr, "ERROR: failed to accept connection\n");
+			return EXIT_FAILURE;
+		}
+
+        // printf("before making thread\n");
+		// Create thread
+		if( pthread_create((client_threads+num_threads), NULL, wordle_gameplay, client_newsds + num_threads) ){
+			fprintf(stderr, "ERROR: failed to create thread\n");
+            for( int i = 0; i < atoi(*(argv+4)); i++ ) {
+                if(*(dictionary + i) == NULL){
+                    continue;
+                }
                 free(*(dictionary + i));
             }
             free(dictionary);
-            perror("read) failed");
-            return EXIT_FAILURE;
-        }
+            free(client_threads);
+            free(client_newsds);
+			return EXIT_FAILURE;
+		}
+        // printf("before detaching\n");
+		pthread_detach(*(client_threads+num_threads));	
+		num_threads++;
+        // printf("get to end\n");
+	}
+
+	//Close the connection
+	close(listener);
+    //free allocations
+	for( int i = 0; i < num_words; i++ ){
+         free(*(dictionary + i));
+    }
+	for(int i = 0; i < num_threads; i++ ){
+        close(*(client_newsds + i));
+    } 
+
     
-    }
-
-    free(output);
-
-    printf("MAIN: seeded pseudo-random number generator with %s\n", *(argv + 2));
-    printf("MAIN: Wordle server listening on port {%s}\n",*(argv + 1));
-
-
-    /* ==================== network setup code above ===================== */
-    // create array of threads
-    int target_word_count = 1;
-    bool run;
-
-    if(setjmp(env) == 0 ){
-        run = true;
-    }
-
-    while (run){
-
-        if(setjmp(env) != 0){
-            break;
-        }
-
-
-        struct sockaddr_in remote_client;
-        int addrlen = sizeof( remote_client );
-
-        int newsd = accept( listener, (struct sockaddr *)&remote_client,
-                            (socklen_t *)&addrlen );
-        if ( newsd == -1 ) { 
-            for (int i = 0; i < dicitonary_count; i++) {
-                 free(*(dictionary + i));
-            }
-            free(dictionary);
-            perror( "accept() failed" ); 
+	pthread_mutex_destroy(&mutex);
+	for( int i = 0; i < atoi(*(argv+4)); i++ ) {
+        if(*(dictionary + i) == NULL){
             continue;
         }
-
-
-        printf("MAIN: rcvd incoming connection request\n");
-
-        // create hidden word
-        char* target_word = calloc(6, sizeof(char));
-        srand48(atoi(*(argv + 2)));
-        
-        int dictionary_index = rand() % (atoi(*(argv + 4))-1);
-        strcpy(target_word, *(dictionary + dictionary_index));
-        *(target_word + 5) = '\0';
-
-        // //add hidden word to words
-        pthread_mutex_lock(&mutex);
-
-        char** temp = realloc(words, (target_word_count + 1) * sizeof(char*));
-        if (temp == NULL) {
-            // Handle realloc failure
-            for (int i = 0; i < dicitonary_count; i++) {
-                 free(*(dictionary + i));
-            }
-            free(temp);
-            free(dictionary);
-            free(target_word);
-            perror("realloc() failed");
-            continue;
-        }
-        
-        words = temp;
-        target_word_count++;
-        *(words + target_word_count - 1) = calloc(6, sizeof(char));
-        strcpy(*(words + target_word_count - 1), target_word);
-        pthread_mutex_unlock(&mutex);
-        
-        //create thread and pass hidden word, clientfd
-        struct threadNeeded *details = malloc(sizeof(struct threadNeeded));
-        details->clientfd = newsd;
-        details->target_word = target_word;
-
-        pthread_t tid;
-        
-        rc = pthread_create(&tid, NULL, wordle_gameplay, (void*)details);
-        if ( rc != 0 ){
-            for (int i = 0; i < dicitonary_count; i++) {
-                 free(*(dictionary + i));
-            }
-            free(dictionary);
-            free(details);
-            free(target_word);
-            perror ("MAIN: pthread_create() failed");
-            continue;
-        }
-        pthread_detach(tid);
-        
-        // free(target_word);
-        if(setjmp(env) == 0 ){
-            run = true;
-        }else{
-            run = false;
-        }
-    }
-
-    //end server
-    
-    close(listener);
-
-    for (int i = 0; i < dicitonary_count; i++) {
         free(*(dictionary + i));
     }
     free(dictionary);
+    free(client_threads);
+    free(client_newsds);
 
-    printf("MAIN: SIGUSR1 rcvd; Wordle server shutting down...\n");
-    return EXIT_SUCCESS;
-
-
+	return EXIT_SUCCESS;
 }
+
 
 
 
