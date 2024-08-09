@@ -95,9 +95,10 @@ while ( 1 )    /* TO DO: fix the memory leaks! */
       printf( " -- %d guess%s remaining\n", guesses, guesses == 1 ? "" : "es" );
       if ( guesses == 0 )
       {
+
           flag = 1;
-          break;
           printf( "CLIENT: you lost!\n" );
+          break;
       }
       int total = 0;
       for (int i = 3; i < 8; i++)
