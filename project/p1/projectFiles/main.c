@@ -104,13 +104,14 @@ void enqueue(ReadyQueue *q, Process *p) {
     q->processes[q->rear++] = p;
 }
 
-Process *dequeue(ReadyQueue *q) {
-    if (is_empty(q)) {
-        fprintf(stderr, "Queue is empty\n");
-        return NULL;
-    }
-    return q->processes[q->front++];
-}
+Process *dequeue(ReadyQueue *q);
+// {
+    // if (is_empty(q)) {
+    //     fprintf(stderr, "Queue is empty\n");
+    //     return NULL;
+    // }
+    // return q->processes[q->front++];
+// }
 
 int is_empty(ReadyQueue *q) {
     return q->front == q->rear;
@@ -151,9 +152,9 @@ int main(int argc, char **argv) {
 
     int tcs = atoi(*(argv + 6));
 
-    double tau = atof(*(argv + 7));
+    // double tau = atof(*(argv + 7));
 
-    int tslice = atoi(*(argv + 8));
+    // int tslice = atoi(*(argv + 8));
 
     Process *processes = (Process *)calloc(n_processes, sizeof(Process));
     srand48(seed);
@@ -182,6 +183,8 @@ int main(int argc, char **argv) {
         perror("Error opening file");
         abort();
     }
+
+    
 
     double cpu_sum = 0;
 	double io_sum = 0;
@@ -280,6 +283,9 @@ int main(int argc, char **argv) {
     fprintf(output, "-- CPU-bound average I/O burst time: %.3f ms\n", round_up(cpu_avg_io, 3));
     fprintf(output, "-- I/O-bound average I/O burst time: %.3f ms\n", round_up(io_avg_io, 3));
     fprintf(output, "-- overall average I/O burst time: %.3f ms\n", round_up(overall_avg_io, 3));
+
+
+    FCFS(processes, n_processes, tcs, output);
 
     fclose(output);
 }
