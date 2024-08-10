@@ -5,15 +5,15 @@
 #include <math.h>
 #include <stdbool.h>
 
-typedef struct {
-    char *id;
-    int numBursts;
-    int **cpu_io_bursts;
-    bool cpu_bound;
-    double lambda;
-    double ceiling;
-    int arrival;
-} Process;
+typedef struct{
+	char * id;
+	int numBursts;
+	int ** cpu_io_bursts;
+	bool cpu_bound;
+	double lambda;
+	double ceiling;
+	int arrival;
+}Process;
 
 typedef struct {
     Process *process;
@@ -44,7 +44,7 @@ void print_queue(Process_helper *queue, int queue_count) {
     }
 }
 
-void FCFS(Process *givenProcesses, int n_process, int tcs) {
+void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output) {
     Process_helper *unvisited = calloc(n_process, sizeof(Process_helper));
     for (int n = 0; n < n_process; n++) {
         Process_helper *p = (unvisited + n);

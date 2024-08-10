@@ -15,6 +15,15 @@ typedef struct{
 	int arrival;
 }Process;
 
+typedef struct {
+    Process *process;
+    int index;
+    int fcfs_blockedio;
+} Process_helper;
+
+int starter_compare(const void *a, const void *b);
+void print_queue(Process_helper *queue, int queue_count);
+void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output );
 
 
 double next_exp(double lambda, double ceiling){
@@ -112,7 +121,7 @@ void simulateRR(Process *Process, int n, int tslice){
     
 }
 int main(int argc, char **argv) {
-    if (argc != 6) {
+    if (argc != 9) {
         fprintf(stderr, "Invalid amount of arguments\n");
         abort();
     }
@@ -139,6 +148,12 @@ int main(int argc, char **argv) {
         perror("Upper Bound(ceiling) way too low");
         abort();
     }
+
+    int tcs = atoi(*(argv + 6));
+
+    double tau = atof(*(argv + 7));
+
+    int tslice = atoi(*(argv + 8));
 
     Process *processes = (Process *)calloc(n_processes, sizeof(Process));
     srand48(seed);
