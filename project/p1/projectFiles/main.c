@@ -16,6 +16,7 @@ typedef struct{
 }Process;
 
 
+
 double next_exp(double lambda, double ceiling){
 	double next = ceiling * 100;
 	while(ceil(next) > ceiling){
