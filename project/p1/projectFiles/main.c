@@ -25,6 +25,8 @@ int starter_compare(const void *a, const void *b);
 void print_queue(Process_helper *queue, int queue_count);
 void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output );
 
+void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FILE *output);
+
 
 double next_exp(double lambda, double ceiling){
 	double next = ceiling * 100;
@@ -77,50 +79,48 @@ double round_up(double value, int decimal_places) {
 }
 
 //p2: Round Robin
-typedef struct {
-    Process **processes;
-    int front;
-    int rear;
-    int capacity;   
-} ReadyQueue;
 
-void init_queue(ReadyQueue *q, int capacity) {
-    q->processes = (Process **)malloc(capacity * sizeof(Process *));
-    if (!q->processes) {
-        perror("Failed to allocate memory for the ready queue");
-        exit(EXIT_FAILURE);
-    }
-    q->front = 0;
-    q->rear = 0;
-    q->capacity = capacity;
-}
+// typedef struct {
+//     Process **processes;
+//     int front;
+//     int rear;
+//     int capacity;   
+// } ReadyQueue;
 
-
-void enqueue(ReadyQueue *q, Process *p) {
-    if (q->rear == q->capacity) {
-        fprintf(stderr, "Queue is full\n");
-        return;
-    }
-    q->processes[q->rear++] = p;
-}
-
-Process *dequeue(ReadyQueue *q);
-// {
-    // if (is_empty(q)) {
-    //     fprintf(stderr, "Queue is empty\n");
-    //     return NULL;
-    // }
-    // return q->processes[q->front++];
+// void init_queue(ReadyQueue *q, int capacity) {
+//     q->processes = (Process **)malloc(capacity * sizeof(Process *));
+//     if (!q->processes) {
+//         perror("Failed to allocate memory for the ready queue");
+//         exit(EXIT_FAILURE);
+//     }
+//     q->front = 0;
+//     q->rear = 0;
+//     q->capacity = capacity;
 // }
 
-int is_empty(ReadyQueue *q) {
-    return q->front == q->rear;
-}
+
+// void enqueue(ReadyQueue *q, Process *p) {
+//     if (q->rear == q->capacity) {
+//         fprintf(stderr, "Queue is full\n");
+//         return;
+//     }
+//     q->processes[q->rear++] = p;
+// }
+
+// Process *dequeue(ReadyQueue *q);
+// // {
+//     // if (is_empty(q)) {
+//     //     fprintf(stderr, "Queue is empty\n");
+//     //     return NULL;
+//     // }
+//     // return q->processes[q->front++];
+// // }
+
+// int is_empty(ReadyQueue *q) {
+//     return q->front == q->rear;
+// }
 
 
-void simulateRR(Process *Process, int n, int tslice){
-    
-}
 int main(int argc, char **argv) {
     if (argc != 9) {
         fprintf(stderr, "Invalid amount of arguments\n");
@@ -151,6 +151,11 @@ int main(int argc, char **argv) {
     }
 
     int tcs = atoi(*(argv + 6));
+    int Tslice = atoi(*(argv + 8));
+    if(Tslice < 0){
+        perror("Invalid time slice");
+        abort();
+    }
 
     // double tau = atof(*(argv + 7));
 
@@ -287,5 +292,9 @@ int main(int argc, char **argv) {
 
     FCFS(processes, n_processes, tcs, output);
 
+    RoundRobin(processes, n_processes, tcs, Tslice, output);
+    
+
     fclose(output);
+
 }

@@ -18,19 +18,19 @@ typedef struct {
     Process *process;
     int index;
     int rr_blockedio;
-} Process_helper;
+} Process_helperRR;
 
 // Helper functions
-int starter_compare(const void *a, const void *b) {
-    Process_helper *ph1 = (Process_helper *)a;
-    Process_helper *ph2 = (Process_helper *)b;
+static int starter_compare(const void *a, const void *b) {
+    Process_helperRR *ph1 = (Process_helperRR *)a;
+    Process_helperRR *ph2 = (Process_helperRR *)b;
     if ((*ph1).process->arrival == (*ph2).process->arrival) {
         return strcmp((*ph1).process->id, (*ph2).process->id);
     }
     return (*ph1).process->arrival - (*ph2).process->arrival;
 }
 
-void print_queue(Process_helper *queue, int queue_count) {
+static void print_queue(Process_helperRR *queue, int queue_count) {
     if (queue_count == 0) {
         printf("[Q empty]\n");
     } else {
@@ -50,7 +50,7 @@ void print_queue(Process_helper *queue, int queue_count) {
 Purpose: Adds a process to the back of the ready queue, effectively re-queuing a process that has been preempted or has completed its I/O burst.
 
 Parameters:
-    queue: A pointer to the pointer of the array of Process_helper structures (the ready queue).
+    queue: A pointer to the pointer of the array of Process_helperRR structures (the ready queue).
     queue_size: A pointer to the integer that holds the current size of the queue.
     current_process: The process to be re-queued.
 
@@ -60,9 +60,9 @@ How it works:
     Adds the current_process to the back of the queue.
 */
 
-void requeue_process(Process_helper **queue, int *queue_size, Process_helper *current_process) {
+static void requeue_process(Process_helperRR **queue, int *queue_size, Process_helperRR *current_process) {
     (*queue_size)++;
-    *queue = realloc(*queue, (*queue_size) * sizeof(Process_helper));
+    *queue = realloc(*queue, (*queue_size) * sizeof(Process_helperRR));
     if (*queue == NULL) {
         perror("realloc() failed");
         abort();
@@ -74,7 +74,7 @@ void requeue_process(Process_helper **queue, int *queue_size, Process_helper *cu
 Purpose: Dequeues the first process from the ready queue and prepares it to start using the CPU.
 
 Parameters:
-    queue: A pointer to the pointer of the array of Process_helper structures (the ready queue).
+    queue: A pointer to the pointer of the array of Process_helperRR structures (the ready queue).
     queue_size: A pointer to the integer that holds the current size of the queue.
     current_process: A pointer to the pointer of the current process being executed.
     queue_to_cpu: A pointer to the integer tracking the time remaining for context switching.
@@ -87,22 +87,24 @@ How it works:
     Prints the start of the process using the CPU.
 */
 
-void dequeue_process(Process_helper **queue, int *queue_size, Process_helper **current_process, int *queue_to_cpu, int tcs, int time) {
+static void dequeue_process(Process_helperRR **queue, int *queue_size, Process_helperRR **current_process, int *queue_to_cpu, int tcs, int time) {
     if (*queue_size > 0) {
         (*queue_to_cpu)--;
         if (*queue_to_cpu == 0) {
-            *current_process = malloc(sizeof(Process_helper));
+            *current_process = malloc(sizeof(Process_helperRR));
             **current_process = **queue;
             // Shift all elements down one index
             for (int i = 0; i < (*queue_size) - 1; i++) {
                 (*queue)[i] = (*queue)[i + 1];
             }
             (*queue_size)--;
-            *queue = realloc(*queue, (*queue_size) * sizeof(Process_helper));
+            *queue = realloc(*queue, (*queue_size) * sizeof(Process_helperRR));
             if (*queue == NULL && *queue_size > 0) {
                 perror("realloc() failed");
                 abort();
             }
+            start_process(*current_process, tcs, &time, queue_to_cpu);
+            
             printf("time %dms: Process %s started using the CPU ", time, (*current_process)->process->id);
             print_queue(*queue, *queue_size);
             *queue_to_cpu = tcs + 1;
@@ -114,9 +116,9 @@ void dequeue_process(Process_helper **queue, int *queue_size, Process_helper **c
 Purpose: Handles the completion of I/O bursts for processes and re-queues them to the ready queue.
 
 Parameters:
-    previous_process: A pointer to the pointer of the array of Process_helper structures currently waiting for I/O completion.
+    previous_process: A pointer to the pointer of the array of Process_helperRR structures currently waiting for I/O completion.
     previous_size: A pointer to the integer holding the number of processes waiting for I/O completion.
-    queue: A pointer to the pointer of the array of Process_helper structures (the ready queue).
+    queue: A pointer to the pointer of the array of Process_helperRR structures (the ready queue).
     queue_size: A pointer to the integer holding the current size of the queue.
     time: The current simulation time.
 
@@ -125,7 +127,7 @@ How it works:
     If the current time matches the time when a process should complete its I/O burst, the process is re-queued and removed from the previous_process list.
 */
 
-void complete_io(Process_helper **previous_process, int *previous_size, Process_helper **queue, int *queue_size, int time) {
+static void complete_io(Process_helperRR **previous_process, int *previous_size, Process_helperRR **queue, int *queue_size, int time) {
     for (int n = 0; n < *previous_size; n++) {
         if (time == (*previous_process)[n].rr_blockedio) {
             requeue_process(queue, queue_size, &((*previous_process)[n]));
@@ -135,7 +137,7 @@ void complete_io(Process_helper **previous_process, int *previous_size, Process_
                 (*previous_process)[j] = (*previous_process)[j + 1];
             }
             (*previous_size)--;
-            *previous_process = realloc(*previous_process, (*previous_size) * sizeof(Process_helper));
+            *previous_process = realloc(*previous_process, (*previous_size) * sizeof(Process_helperRR));
             if (*previous_process == NULL && *previous_size > 0) {
                 perror("realloc() failed");
                 abort();
@@ -149,19 +151,19 @@ void complete_io(Process_helper **previous_process, int *previous_size, Process_
 Purpose: Checks if any new processes have arrived at the current time and adds them to the ready queue.
 
 Parameters:
-    unvisited: A pointer to the pointer of the array of Process_helper structures that have not yet started execution.
+    unvisited: A pointer to the pointer of the array of Process_helperRR structures that have not yet started execution.
     visited_count: A pointer to the integer tracking the number of processes that have been visited.
     n_process: The total number of processes.
-    queue: A pointer to the pointer of the array of Process_helper structures (the ready queue).
+    queue: A pointer to the pointer of the array of Process_helperRR structures (the ready queue).
     queue_size: A pointer to the integer holding the current size of the queue.
     time: The current simulation time.
 
 How it works:
     If a process's arrival time matches the current time, it is added to the ready queue.
 */
-void check_process_arrivals(Process_helper **unvisited, int *visited_count, int n_process, Process_helper **queue, int *queue_size, int time) {
+static void check_process_arrivals(Process_helperRR **unvisited, int *visited_count, int n_process, Process_helperRR **queue, int *queue_size, int time) {
     if (*visited_count < n_process) {
-        Process_helper *P = (*unvisited + *visited_count);
+        Process_helperRR *P = (*unvisited + *visited_count);
         if (time == P->process->arrival) {
             (*visited_count)++;
             P->rr_blockedio = 0;
@@ -173,7 +175,7 @@ void check_process_arrivals(Process_helper **unvisited, int *visited_count, int 
     }
 }
 
-void start_process(Process_helper *current_process, int tslice, int *process_end_cpu_at, int *time) {
+static void start_process(Process_helperRR *current_process, int tslice, int *process_end_cpu_at, int *time) {
     int **cpu_io_bursts = current_process->process->cpu_io_bursts;
     int current_burst_time = *(*(cpu_io_bursts + current_process->index) + 0);
     int run_time = (current_burst_time > tslice) ? tslice : current_burst_time;
@@ -185,15 +187,15 @@ void start_process(Process_helper *current_process, int tslice, int *process_end
 
 void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FILE *output) {
     // Sort the processes by arrival time
-    Process_helper *unvisited = calloc(n_process, sizeof(Process_helper));
+    Process_helperRR *unvisited = calloc(n_process, sizeof(Process_helperRR));
     for (int n = 0; n < n_process; n++) {
-        Process_helper *p = (unvisited + n);
+        Process_helperRR *p = (unvisited + n);
         p->process = (givenProcesses + n);
         p->index = 0;
         p->rr_blockedio = 0;
     }
     // Sort the processes by arrival time
-    qsort(unvisited, n_process, sizeof(Process_helper), starter_compare);
+    qsort(unvisited, n_process, sizeof(Process_helperRR), starter_compare);
 
     int visited_count = 0;
     int time = 0;
@@ -201,9 +203,9 @@ void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FIL
     int process_end_cpu_at = 0;
     int queue_size = 0;
 
-    Process_helper *queue = calloc(0, sizeof(Process_helper));
-    Process_helper *current_process = NULL;
-    Process_helper *previous_process = calloc(0, sizeof(Process_helper));
+    Process_helperRR *queue = calloc(0, sizeof(Process_helperRR));
+    Process_helperRR *current_process = NULL;
+    Process_helperRR *previous_process = calloc(0, sizeof(Process_helperRR));
     int previous_size = 0;
 
     printf("time 0ms: Simulator started for RR [Q empty]\n");
@@ -226,7 +228,7 @@ void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FIL
                         printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ", time, current_process->process->id, current_process->rr_blockedio);
                         print_queue(queue, queue_size);
                         previous_size++;
-                        previous_process = realloc(previous_process, previous_size * sizeof(Process_helper));
+                        previous_process = realloc(previous_process, previous_size * sizeof(Process_helperRR));
                         if (previous_process == NULL) {
                             perror("previous_process realloc() failed");
                             abort();
@@ -259,3 +261,4 @@ void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FIL
     free(previous_process);
     free(unvisited);
 }
+
