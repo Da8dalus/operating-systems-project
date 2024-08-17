@@ -19,13 +19,17 @@ typedef struct {
     Process *process;
     int index;
     int fcfs_blockedio;
+    int time_queuestart;
+    int time_tcs;
 } Process_helper;
 
+
+int backtoqueue_comparer(const void *a, const void *b);
 int starter_compare(const void *a, const void *b);
 void print_queue(Process_helper *queue, int queue_count);
-void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output );
+void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_cpuBound, int n_ioBound );
 
-void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FILE *output);
+// void RoundRobin(Process *givenProcesses, int n_process, int tcs, int tslice, FILE *output);
 
 
 double next_exp(double lambda, double ceiling){
@@ -290,9 +294,9 @@ int main(int argc, char **argv) {
     fprintf(output, "-- overall average I/O burst time: %.3f ms\n", round_up(overall_avg_io, 3));
 
 
-    FCFS(processes, n_processes, tcs, output);
+    FCFS(processes, n_processes, tcs, output,n_cpu, n_processes-n_cpu);
 
-    RoundRobin(processes, n_processes, tcs, Tslice, output);
+    // RoundRobin(processes, n_processes, tcs, Tslice, output);
     
 
     fclose(output);

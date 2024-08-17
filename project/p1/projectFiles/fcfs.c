@@ -18,6 +18,8 @@ typedef struct {
     Process *process;
     int index;
     int fcfs_blockedio;
+    int time_queuestart;
+    int time_tcs;
 } Process_helper;
 
 int starter_compare(const void *a, const void *b) {
@@ -27,6 +29,16 @@ int starter_compare(const void *a, const void *b) {
         return strcmp((*ph1).process->id, (*ph2).process->id);
     }
     return (*ph1).process->arrival - (*ph2).process->arrival;
+}
+
+
+int backtoqueue_comparer(const void *a, const void *b) {
+    Process_helper *ph1 = (Process_helper *)a;
+    Process_helper *ph2 = (Process_helper *)b;
+    if((*ph1).fcfs_blockedio == (*ph2).fcfs_blockedio){
+        return strcmp((*ph1).process->id, (*ph2).process->id);
+    }
+    return (*ph1).fcfs_blockedio - (*ph2).fcfs_blockedio;
 }
 
 void print_queue(Process_helper *queue, int queue_count) {
@@ -42,13 +54,20 @@ void print_queue(Process_helper *queue, int queue_count) {
     }
 }
 
-void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output) {
+void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_cpuBound, int n_ioBound ){
     Process_helper *unvisited = calloc(n_process, sizeof(Process_helper));
     for (int n = 0; n < n_process; n++) {
         Process_helper *p = (unvisited + n);
         p->process = (givenProcesses + n);
         p->index = 0;
         p->fcfs_blockedio = 0;
+        p->time_queuestart = 0;
+        p->time_tcs = 0;
+    }
+
+    if(n_cpuBound + n_ioBound != n_process){
+        perror("Counted too many processes");
+        abort();
     }
 
     // Sort unvisited processes by arrival time
@@ -56,9 +75,30 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output) {
 
     int visited_count = 0;
     int time = 0;
-    int queue_to_cpu = tcs / 2;
+    // int queue_to_cpu = tcs / 2;
     int process_end_cpu_at = 0;
     int queue_size = 0;
+
+
+
+    //stat counters
+    double cpu_activetime = 0;
+    
+    double cpuBound_waittime = 0;
+    double cpu_waittime = 0;
+    double io_waittime = 0;
+    double ioBound_waittime = 0;
+
+    double cpuTurnaround = 0;
+    double ioTurnaround = 0;
+    double cpuTurn_Count = 0;
+    double ioTurn_Count = 0;
+
+    int cpuContext = 0;
+    int ioContext = 0;
+    
+
+    
 
     Process_helper *queue = calloc(0, sizeof(Process_helper));  // Start with an empty queue
     Process_helper *current_process = NULL; // To track the current process using the CPU
@@ -69,58 +109,81 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output) {
 
     while (visited_count < n_process || queue_size > 0 || current_process != NULL || previous_size > 0) {
         // (a) CPU burst completion
-if (current_process != NULL) {
-    if (time == process_end_cpu_at) {
-        current_process->index++;
+        if (current_process != NULL) {
+            if (time == process_end_cpu_at) {
+                current_process->index++;
 
-        // Completion message
-        if (time < 10000) {
-            printf("time %dms: Process %s completed a CPU burst; %d bursts to go ",
-                   time, current_process->process->id, current_process->process->numBursts - current_process->index);
-            print_queue(queue, queue_size);
-        }
-
-        // Check if the process has more bursts left
-        if (current_process->index < current_process->process->numBursts) {
-            // Blocking on I/O
-            int **cpu_io_bursts = current_process->process->cpu_io_bursts;
-            if (*(*(cpu_io_bursts + current_process->index - 1) + 1) > 0) {  // Correct index for I/O burst
-                current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs/2;
+                // Completion message
                 if (time < 10000) {
-                    printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ",
-                           time, current_process->process->id, current_process->fcfs_blockedio);
+                    printf("time %dms: Process %s completed a CPU burst; %d bursts to go ",
+                        time, current_process->process->id, current_process->process->numBursts - current_process->index);
                     print_queue(queue, queue_size);
                 }
 
-                // Add current_process to previous_process array
-                previous_size++;
-                previous_process = realloc(previous_process, previous_size * sizeof(Process_helper));
-                if (previous_process == NULL) {
-                    perror("previous_process realloc() failed");
-                    abort();
-                }
-                *(previous_process + previous_size - 1) = *current_process;
-            }
-        } else {
-            // Termination message
-            printf("time %dms: Process %s terminated ", time, current_process->process->id);
-            print_queue(queue, queue_size);
-        }
+                // Check if the process has more bursts left
+                if (current_process->index < current_process->process->numBursts) {
+                    // Blocking on I/O
+                    int **cpu_io_bursts = current_process->process->cpu_io_bursts;
+                    if (*(*(cpu_io_bursts + current_process->index - 1) + 1) > 0) {  // Correct index for I/O burst
+                        // if(queue_size == 0){
+                            current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs/2;
+                        // }
+                            // current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs;
+                        
+                        
+                        if (time < 10000) {
+                            printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ",
+                                time, current_process->process->id, current_process->fcfs_blockedio);
+                            print_queue(queue, queue_size);
+                        }
 
-        free(current_process);
-        current_process = NULL;
-    }
-}
+                        if(current_process->process->cpu_bound){
+
+                            cpuTurn_Count++;
+                        }else{
+                            ioTurn_Count++;
+                        }
+                        ///need to add some way to use context switch
+
+                        // Add current_process to previous_process array
+                        previous_size++;
+                        previous_process = realloc(previous_process, previous_size * sizeof(Process_helper));
+                        if (previous_process == NULL) {
+                            perror("previous_process realloc() failed");
+                            abort();
+                        }
+                        *(previous_process + previous_size - 1) = *current_process;
+                    }
+                } else {
+                    // Termination message
+                    printf("time %dms: Process %s terminated ", time, current_process->process->id);
+                    print_queue(queue, queue_size);
+                }
+                
+                if(queue_size > 0){
+                    queue->time_tcs += tcs/2 + 1;
+                    // if(queue->process->cpu_bound){
+                    //     cpuTurnaround += tcs / 2;
+                    // }else{
+                    //     ioTurnaround += tcs/2;
+                    // }
+                }
+
+                free(current_process);
+                current_process = NULL;
+            }
+        }
 
 
         // (b) Process starts using the CPU
         if (current_process == NULL && queue_size > 0) {
-            queue_to_cpu--;
+            queue->time_tcs--;
 
-            if (queue_to_cpu == 0) {
+            if (queue->time_tcs == 0) {
                 // Dequeue the first process in the queue
                 current_process = malloc(sizeof(Process_helper));
                 *current_process = *queue;
+
 
                 // Shift all elements down one index
                 for (int i = 0; i < queue_size - 1; i++) {
@@ -137,7 +200,23 @@ if (current_process != NULL) {
                     abort();
                 }
 
+
                 Process *p = current_process->process;
+
+                //waittime calculations
+                // if(p->cpu_bound){
+                //     cpuTurnaround += tcs/2;
+                //     cpuContext++;
+                //     cpu_waittime += time - current_process->time_queuestart;
+                //     cpuBound_waittime++;
+                // }else{
+                //     ioTurnaround += tcs/2;
+                //     ioContext++;
+                //     io_waittime += time - current_process->time_queuestart;
+                //     ioBound_waittime++;
+                // }
+                current_process->time_queuestart = 0;
+
                 int **cpu_io_bursts = p->cpu_io_bursts;
 
                 if (time < 10000) {
@@ -145,17 +224,34 @@ if (current_process != NULL) {
                            time, p->id, *(*(cpu_io_bursts + current_process->index) + 0));
                     print_queue(queue, queue_size);
                 }
+                if(p->cpu_bound){
+                    cpuTurnaround += *(*(cpu_io_bursts + current_process->index) + 0)+ tcs;
+                }else{
+                    ioTurnaround += *(*(cpu_io_bursts + current_process->index) + 0) + tcs;
+                }
+
+                
                 process_end_cpu_at = time + *(*(cpu_io_bursts + current_process->index) + 0);
-                queue_to_cpu = tcs+1;
+                cpu_activetime += *(*(cpu_io_bursts + current_process->index) + 0);
             }
         }
 
         // (c) I/O burst completions so add back to queue
+        qsort(previous_process,previous_size, sizeof(Process_helper), backtoqueue_comparer);
         for (int n = 0; n < previous_size; n++) {
             Process_helper *previous = previous_process + n;
             if (time == previous->fcfs_blockedio) {
                 // Increase the queue size
-                queue_size++;
+               queue_size++;
+               previous->time_tcs = tcs/2;
+            //    if(previous->process->cpu_bound){
+            //     cpuTurnaround += tcs/2;
+            //    }else{
+            //     ioTurnaround += tcs/2;
+            //    }
+
+                
+                
 
                 // Reallocate memory for the queue
                 queue = realloc(queue, queue_size * sizeof(Process_helper));
@@ -164,6 +260,7 @@ if (current_process != NULL) {
                     abort();
                 }
 
+
                 *(queue + queue_size - 1) = *previous;
 
                 if (time < 10000) {
@@ -171,6 +268,8 @@ if (current_process != NULL) {
                            time, previous->process->id);
                     print_queue(queue, queue_size);
                 }
+
+                previous->time_queuestart = time;
 
                 // Remove the process from previous_process array
                 for (int j = n; j < previous_size - 1; j++) {
@@ -195,6 +294,15 @@ if (current_process != NULL) {
                 visited_count++;
                 P->fcfs_blockedio = 0;
                 P->index = 0;
+                P->time_queuestart = time;
+                P->time_tcs = tcs/2;
+
+                // printf("%s time_tcs = %d\n", process->id, P->time_tcs);
+                // if(process->cpu_bound){
+                //     cpuTurnaround += tcs/2;
+                // }else{
+                //     ioTurnaround += tcs/2;
+                // }
 
                 // Increase the queue size
                 queue_size++;
@@ -215,14 +323,87 @@ if (current_process != NULL) {
             }
         }
 
-        time++;
+        if(visited_count < n_process || queue_size > 0 || current_process != NULL || previous_size > 0){
+            time++;
+        }
+        
+        
     }
 
-    printf("time %dms: Simulator ended for FCFS ", time);
+    printf("time %dms: Simulator ended for FCFS ", time + tcs/2);
     print_queue(queue, queue_size);
+
 
     // Free allocated memory
     free(queue);
     free(previous_process);
     free(unvisited);
+
+
+
+    double cpu_utilization = cpu_activetime / time *100;
+    printf("active time %f\n", cpu_activetime / time);
+    double cpu_boundavgTurn = cpuTurnaround/cpuTurn_Count;
+    double io_boundavgTurn = ioTurnaround / ioTurn_Count;
+    double overallavgTurn = (cpuTurnaround + ioTurnaround)/(cpuTurn_Count + ioTurn_Count);
+
+    double cpu_avgWait = cpu_waittime/ cpuContext;
+    double io_avgWait = io_waittime / ioContext;
+    double overallavgWait = (cpu_waittime + io_waittime)/(cpuBound_waittime + ioBound_waittime);
+
+    if(cpuTurn_Count == 0){
+        cpu_boundavgTurn = 0;
+    }
+    if(ioTurn_Count == 0){
+        io_boundavgTurn = 0;
+    }
+    if(ioTurn_Count == 0 && cpuTurn_Count == 0){
+        overallavgTurn = 0;
+    }
+
+    if(cpuBound_waittime == 0){
+        cpu_avgWait = 0;
+    }
+    if(ioBound_waittime == 0){
+        io_avgWait = 0;
+    }
+    if(cpuBound_waittime + ioBound_waittime == 0){
+        overallavgWait = 0;
+    }
+
+    if(time == 0){
+        cpu_utilization = 0;
+    }
+
+
+//     CPU-bound average wait time: 66.280 ms
+// -- I/O-bound average wait time: 677.200 ms
+// -- overall average wait time: 337.800 ms
+// -- CPU-bound average turnaround time: 1670.920 ms
+// -- I/O-bound average turnaround time: 928.500 ms
+// -- overall average turnaround time: 1340.956 ms
+// -- CPU-bound number of context switches: 25
+// -- I/O-bound number of context switches: 20
+// -- overall number of context switches: 45
+// -- CPU-bound number of preemptions: 0
+// -- I/O-bound number of preemptions: 0
+// -- overall number of preemptions: 0
+
+    fprintf(output,"\nAlgorithm FCFS\n");
+    printf("%.3f", cpuTurnaround);
+
+    fprintf(output, "-- CPU utilization: %.3f%%\n", cpu_utilization);
+    fprintf(output, "-- CPU-bound average wait time: %.3f\n", cpu_avgWait);
+    fprintf(output, "-- I/O-bound average wait time: %.3f\n", io_avgWait);
+    fprintf(output, "-- overall average wait time: %.3f ms\n", overallavgWait);
+    fprintf(output, "-- CPU-bound average turnaround time: %.3f ms\n", cpu_boundavgTurn);
+    fprintf(output, "-- I/O-bound average turnaround time: %.3f ms\n", io_boundavgTurn);
+    fprintf(output, "-- overall average turnaround time: %.3f ms\n", overallavgTurn);
+    fprintf(output, "-- CPU-bound number of context switches: %d\n", cpuContext);
+    fprintf(output, "-- I/O-bound number of context switches: %d\n", ioContext);
+    fprintf(output, "-- overall number of context switches: %d\n", ioContext + cpuContext);
+    fprintf(output, "-- CPU-bound number of preemptions: 0\n");
+    fprintf(output, "-- I/O-bound number of preemptions: 0\n");
+    fprintf(output, "-- overall number of preemptions: 0\n");
+
 }

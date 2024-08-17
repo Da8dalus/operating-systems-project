@@ -1,0 +1,24 @@
+-- number of processes: 3
+-- number of CPU-bound processes: 1
+-- number of I/O-bound processes: 2
+-- CPU-bound average CPU burst time: 1600.640 ms
+-- I/O-bound average CPU burst time: 247.300 ms
+-- overall average CPU burst time: 999.156 ms
+-- CPU-bound average I/O burst time: 419.084 ms
+-- I/O-bound average I/O burst time: 3277.778 ms
+-- overall average I/O burst time: 1644.239 ms
+
+Algorithm FCFS
+-- CPU utilization: 68.122%
+-- CPU-bound average wait time: 0.000
+-- I/O-bound average wait time: 0.000
+-- overall average wait time: 0.000 ms
+-- CPU-bound average turnaround time: 1671.500 ms
+-- I/O-bound average turnaround time: 279.222 ms
+-- overall average turnaround time: 1074.810 ms
+-- CPU-bound number of context switches: 0
+-- I/O-bound number of context switches: 0
+-- overall number of context switches: 0
+-- CPU-bound number of preemptions: 0
+-- I/O-bound number of preemptions: 0
+-- overall number of preemptions: 0
