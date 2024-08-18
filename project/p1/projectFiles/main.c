@@ -82,48 +82,7 @@ double round_up(double value, int decimal_places) {
     return ceil(value * factor) / factor;
 }
 
-//p2: Round Robin
-
-// typedef struct {
-//     Process **processes;
-//     int front;
-//     int rear;
-//     int capacity;   
-// } ReadyQueue;
-
-// void init_queue(ReadyQueue *q, int capacity) {
-//     q->processes = (Process **)malloc(capacity * sizeof(Process *));
-//     if (!q->processes) {
-//         perror("Failed to allocate memory for the ready queue");
-//         exit(EXIT_FAILURE);
-//     }
-//     q->front = 0;
-//     q->rear = 0;
-//     q->capacity = capacity;
-// }
-
-
-// void enqueue(ReadyQueue *q, Process *p) {
-//     if (q->rear == q->capacity) {
-//         fprintf(stderr, "Queue is full\n");
-//         return;
-//     }
-//     q->processes[q->rear++] = p;
-// }
-
-// Process *dequeue(ReadyQueue *q);
-// // {
-//     // if (is_empty(q)) {
-//     //     fprintf(stderr, "Queue is empty\n");
-//     //     return NULL;
-//     // }
-//     // return q->processes[q->front++];
-// // }
-
-// int is_empty(ReadyQueue *q) {
-//     return q->front == q->rear;
-// }
-
+void RR(Process *givenProcesses, int n_process, int tcs, int tslice, FILE *output, int n_cpuBound, int n_ioBound );
 
 int main(int argc, char **argv) {
     if (argc != 9) {
@@ -295,8 +254,9 @@ int main(int argc, char **argv) {
 
 
     FCFS(processes, n_processes, tcs, output,n_cpu, n_processes-n_cpu);
+    RR(processes, n_processes, tcs, Tslice, output, n_cpu, n_processes-n_cpu);
 
-    // RoundRobin(processes, n_processes, tcs, Tslice, output);
+    
     
 
     fclose(output);
