@@ -1,257 +1,427 @@
-class SRT:
-    def __init__(self, queue: list[process], context_switch, theta, alpha):
-        self.queue = queue
-        self.queue.sort(key=lambda x: x.pid)
-        self.ready = []
-        self.io_list = []
-        self.waiting_io = None
-        self.lengths = dict()
-        self.current_process = None
-        self.current_time = 0
-        self.context_switch = context_switch
-        self.context_switching = 0
-        self.theta = theta
-        self.alpha = alpha
-        self.x = 0
-        self.cpu_burst_start_time = 0
-        self.cpu_use_time = 0 #How many ms the cpu has been in use for, used only in simout
-        self.cpu_bound_context_switches = 0 #Simout only
-        self.io_bound_context_switches = 0 #Simout only
-        self.io_bound_wait_time_total = 0 #Simout only
-        self.cpu_bound_wait_time_total = 0 #Simout only
-        self.cpu_bound_turn_time_total = 0 #Simout only
-        self.io_bound_turn_time_total = 0 #Simout only
-        self.cpu_bound_preemptions = 0 #Simout only
-        self.io_bound_preemptions = 0 #Simout only 
-        self.cpu_bound_bursts = 0#Keeps track of how many cpu bound bursts there are
-        self.io_bound_bursts = 0#Keeps track of how many i/o bound bursts there are
-        self.queue_wait = []
-        self.io_arrived = None
-        self.time_context_switching = 0
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
-    def place_process(self, process, tau):
-        #places processes based on their tau value, if there is a process with a tau higher than the given one,
-        #place the input one before it and return.
-        if len(self.ready) == 0:
-            self.ready.append(process)
-            process.last_ready_time = self.current_time
-            return
-        #Time remaining: tau - preempt_time_remaining = time spent bursting, tau - time_spent_bursting = preempt_time_remaining
-        for i in range(len(self.ready)):
-            burst = self.lengths[self.ready[i]] - self.ready[i].preempt_remaining_time
-            if self.lengths[self.ready[i]] == tau: #If we've found a process with the same tau as us, ok like, the chance of two tau's being the same, and the rem times being the same is small.
-               if process.pid < self.ready[i].pid:#If the input process is lexographically ahead of the other process, place it first
-                   self.ready.insert(i, process)
-                   process.last_ready_time = self.current_time
-                   return
-            if self.ready[i].preempt_remaining_time != 0: 
-                if process.preempt_remaining_time != 0 and self.ready[i].preempt_remaining_time > process.preempt_remaining_time:
-                    self.ready.insert(i, process)
-                    process.last_ready_time = self.current_time
-                    return
-                if self.ready[i].preempt_remaining_time > tau:
-                    self.ready.insert(i, process)
-                    process.last_ready_time = self.current_time
-                    return
-            elif process.preempt_remaining_time != 0:
-                if self.lengths[self.ready[i]] > process.preempt_remaining_time:
-                    self.ready.insert(i, process)
-                    process.last_ready_time = self.current_time
-                    return
-            elif self.lengths[self.ready[i]] > tau:
-                self.ready.insert(i, process)
-                process.last_ready_time = self.current_time
-                return
-        self.ready.append(process)
-        process.last_ready_time = self.current_time
-        return
+typedef struct process {
+    char pid[10];
+    int arrival_time;
+    int *cpu_bursts;
+    int *io_bursts;
+    int is_cpu_bound;
+    int context_switches;
+    int preempt_remaining_time;
+    int last_ready_time;
+    int last_burst_time;
+    int total_burst_time;
+    int *waiting_time;
+    int *static_cpu_bursts;
+} process;
 
-    def check_arrival(self):
-        #ok so this just puts processes on the ready queue. 
-        #It also calculates the tau for each process.
-        #Because of this, it is only called when a process initally arrives in the simulation.
-        p = 0
-        while (p < len(self.queue)):
-            if self.queue[p].arrival_time == self.current_time:
-                tau_0 = math.ceil(1 / self.theta)
-                self.lengths[self.queue[p]] = tau_0
-                self.place_process(self.queue[p], tau_0)
-                if(self.current_time < 10000):
-                    print(f"time {self.current_time}ms: Process {self.queue[p].pid} (tau {tau_0}ms) arrived; added to ready queue {self.queue_print()}")
-                self.queue.pop(p)
-                #print(self.__str__())
-                p = 0
-            else:
-                p +=1
-    def cpu_burst(self):
-        if self.current_process.cpu_bursts[0] > 0:
-            self.current_process.cpu_bursts[0] -= 1
-            #self.lengths[self.current_process] -= 1
-            self.cpu_use_time += 1
-            if self.current_process.cpu_bursts[0] == 0:
-                if(self.current_process.is_cpu_bound):
-                    self.cpu_bound_bursts += 1
-                else:
-                    self.io_bound_bursts += 1
-                if(len(self.current_process.cpu_bursts) == 2):
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time}ms: Process {self.current_process.pid} (tau {self.lengths[self.current_process]}ms) completed a CPU burst; 1 burst to go {self.queue_print()}")
-                elif(len(self.current_process.cpu_bursts) == 1):
-                    s = "" #Idk what else to do here
-                    #print(f"time {self.current_time}ms: Process {self.current_process.pid} completed a CPU burst; {len(self.current_process.cpu_bursts) - 1} bursts to go {self.queue_print()}")
-                else:
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time}ms: Process {self.current_process.pid} (tau {self.lengths[self.current_process]}ms) completed a CPU burst; {len(self.current_process.cpu_bursts) - 1} bursts to go {self.queue_print()}")
-                #print(self.__str__())
-                self.context_switching = self.context_switch // 2
-                self.current_process.cpu_bursts.pop(0)
-                self.current_process.last_burst_time = 0
-                self.current_process.preempt_remaining_time = 0
-                if len(self.current_process.io_bursts) > 0:
-                    block_until = self.current_time + self.context_switching + self.current_process.io_bursts[0]
-                    tau_n = math.ceil(self.x*self.alpha + (1 - self.alpha)*self.lengths[self.current_process])
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time}ms: Recalculated tau for process {self.current_process.pid}: old tau {self.lengths[self.current_process]}ms ==> new tau {tau_n}ms {self.queue_print()}")
-                    self.lengths[self.current_process] = tau_n
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time}ms: Process {self.current_process.pid} switching out of CPU; blocking on I/O until time {self.current_time + self.context_switching + self.current_process.io_bursts[0]}ms {self.queue_print()}")
-                    self.io_place(self.current_process, block_until)
-                    self.current_process = None
-                    #print(self.__str__())
-                else:
-                    wait_sum = 0
-                    if(self.current_process.is_cpu_bound):
-                        self.cpu_bound_context_switches += self.current_process.context_switches
-                        for num in self.current_process.waiting_time:
-                            wait_sum += max(num -1, 0)
-                        self.cpu_bound_wait_time_total += max(wait_sum - self.current_process.context_switches + len(self.current_process.static_cpu_bursts), 0)
-                        self.cpu_bound_turn_time_total += (wait_sum + self.current_process.total_burst_time + self.context_switch * len(self.current_process.static_cpu_bursts))
-                    else:
-                        self.io_bound_context_switches += self.current_process.context_switches
-                        for num in self.current_process.waiting_time:
-                            wait_sum += max(num -1, 0)
-                        self.io_bound_wait_time_total += max(wait_sum - self.current_process.context_switches + len(self.current_process.static_cpu_bursts), 0)
-                        self.io_bound_turn_time_total += (wait_sum + self.current_process.total_burst_time + self.context_switch * len(self.current_process.static_cpu_bursts))
-                    print(f"time {self.current_time}ms: Process {self.current_process.pid} terminated {self.queue_print()}")
-                    self.current_process = None
-                    #print(self.__str__())
+typedef struct SRT {
+    process **queue;
+    int queue_size;
+    process **ready;
+    int ready_size;
+    process **io_list;
+    int io_list_size;
+    process *waiting_io;
+    int *lengths;
+    process *current_process;
+    int current_time;
+    int context_switch;
+    int context_switching;
+    int theta;
+    int alpha;
+    int x;
+    int cpu_burst_start_time;
+    int cpu_use_time;
+    int cpu_bound_context_switches;
+    int io_bound_context_switches;
+    int io_bound_wait_time_total;
+    int cpu_bound_wait_time_total;
+    int cpu_bound_turn_time_total;
+    int io_bound_turn_time_total;
+    int cpu_bound_preemptions;
+    int io_bound_preemptions;
+    int cpu_bound_bursts;
+    int io_bound_bursts;
+    process **queue_wait;
+    int queue_wait_size;
+    process *io_arrived;
+    int time_context_switching;
+} SRT;
+
+void init_srt(SRT *srt, process **queue, int queue_size, int context_switch, int theta, int alpha) {
+    srt->queue = queue;
+    srt->queue_size = queue_size;
+    srt->ready = (process **)calloc(queue_size, sizeof(process *));
+    srt->ready_size = 0;
+    srt->io_list = (process **)calloc(queue_size, sizeof(process *));
+    srt->io_list_size = 0;
+    srt->waiting_io = NULL;
+    srt->lengths = (int *)calloc(queue_size, sizeof(int));
+    srt->current_process = NULL;
+    srt->current_time = 0;
+    srt->context_switch = context_switch;
+    srt->context_switching = 0;
+    srt->theta = theta;
+    srt->alpha = alpha;
+    srt->x = 0;
+    srt->cpu_burst_start_time = 0;
+    srt->cpu_use_time = 0;
+    srt->cpu_bound_context_switches = 0;
+    srt->io_bound_context_switches = 0;
+    srt->io_bound_wait_time_total = 0;
+    srt->cpu_bound_wait_time_total = 0;
+    srt->cpu_bound_turn_time_total = 0;
+    srt->io_bound_turn_time_total = 0;
+    srt->cpu_bound_preemptions = 0;
+    srt->io_bound_preemptions = 0;
+    srt->cpu_bound_bursts = 0;
+    srt->io_bound_bursts = 0;
+    srt->queue_wait = (process **)calloc(queue_size, sizeof(process *));
+    srt->queue_wait_size = 0;
+    srt->io_arrived = NULL;
+    srt->time_context_switching = 0;
+}
+
+void place_process(SRT *srt, process *proc, int tau) {
+    if (srt->ready_size == 0) {
+        srt->ready[srt->ready_size++] = proc;
+        proc->last_ready_time = srt->current_time;
+        return;
+    }
+    for (int i = 0; i < srt->ready_size; i++) {
+        int burst = srt->lengths[srt->ready[i] - srt->queue[0]] - srt->ready[i]->preempt_remaining_time;
+        if (srt->lengths[srt->ready[i] - srt->queue[0]] == tau) {
+            if (strcmp(proc->pid, srt->ready[i]->pid) < 0) {
+                for (int j = srt->ready_size; j > i; j--) {
+                    srt->ready[j] = srt->ready[j - 1];
+                }
+                srt->ready[i] = proc;
+                proc->last_ready_time = srt->current_time;
+                srt->ready_size++;
+                return;
+            }
+        }
+        if (srt->ready[i]->preempt_remaining_time != 0) {
+            if (proc->preempt_remaining_time != 0 && srt->ready[i]->preempt_remaining_time > proc->preempt_remaining_time) {
+                for (int j = srt->ready_size; j > i; j--) {
+                    srt->ready[j] = srt->ready[j - 1];
+                }
+                srt->ready[i] = proc;
+                proc->last_ready_time = srt->current_time;
+                srt->ready_size++;
+                return;
+            }
+            if (srt->ready[i]->preempt_remaining_time > tau) {
+                for (int j = srt->ready_size; j > i; j--) {
+                    srt->ready[j] = srt->ready[j - 1];
+                }
+                srt->ready[i] = proc;
+                proc->last_ready_time = srt->current_time;
+                srt->ready_size++;
+                return;
+            }
+        } else if (proc->preempt_remaining_time != 0) {
+            if (srt->lengths[srt->ready[i] - srt->queue[0]] > proc->preempt_remaining_time) {
+                for (int j = srt->ready_size; j > i; j--) {
+                    srt->ready[j] = srt->ready[j - 1];
+                }
+                srt->ready[i] = proc;
+                proc->last_ready_time = srt->current_time;
+                srt->ready_size++;
+                return;
+            }
+        } else if (srt->lengths[srt->ready[i] - srt->queue[0]] > tau) {
+            for (int j = srt->ready_size; j > i; j--) {
+                srt->ready[j] = srt->ready[j - 1];
+            }
+            srt->ready[i] = proc;
+            proc->last_ready_time = srt->current_time;
+            srt->ready_size++;
+            return;
+        }
+    }
+    srt->ready[srt->ready_size++] = proc;
+    proc->last_ready_time = srt->current_time;
+}
+
+void check_arrival(SRT *srt) {
+    int p = 0;
+    while (p < srt->queue_size) {
+        if (srt->queue[p]->arrival_time == srt->current_time) {
+            int tau_0 = (int)ceil(1.0 / srt->theta);
+            srt->lengths[srt->queue[p] - srt->queue[0]] = tau_0;
+            place_process(srt, srt->queue[p], tau_0);
+            if (srt->current_time < 10000) {
+                printf("time %dms: Process %s (tau %dms) arrived; added to ready queue [Q", srt->current_time, srt->queue[p]->pid, tau_0);
+                for (int i = 0; i < srt->ready_size; i++) {
+                    printf(" %s", srt->ready[i]->pid);
+                }
+                printf("]\n");
+            }
+            for (int j = p; j < srt->queue_size - 1; j++) {
+                srt->queue[j] = srt->queue[j + 1];
+            }
+            srt->queue_size--;
+            p = 0;
+        } else {
+            p++;
+        }
+    }
+}
+
+void cpu_burst(SRT *srt) {
+    if (srt->current_process->cpu_bursts[0] > 0) {
+        srt->current_process->cpu_bursts[0]--;
+        srt->cpu_use_time++;
+        if (srt->current_process->cpu_bursts[0] == 0) {
+            if (srt->current_process->is_cpu_bound) {
+                srt->cpu_bound_bursts++;
+            } else {
+                srt->io_bound_bursts++;
+            }
+            if (srt->current_time < 10000) {
+                if (srt->current_process->cpu_bursts[1] == 1) {
+                    printf("time %dms: Process %s (tau %dms) completed a CPU burst; 1 burst to go [Q", srt->current_time, srt->current_process->pid, srt->lengths[srt->current_process - srt->queue[0]]);
+                } else {
+                    printf("time %dms: Process %s (tau %dms) completed a CPU burst; %d bursts to go [Q", srt->current_time, srt->current_process->pid, srt->lengths[srt->current_process - srt->queue[0]], srt->current_process->cpu_bursts[1] - 1);
+                }
+                for (int i = 0; i < srt->ready_size; i++) {
+                    printf(" %s", srt->ready[i]->pid);
+                }
+                printf("]\n");
+            }
+            srt->context_switching = srt->context_switch / 2;
+            srt->current_process->cpu_bursts++;
+            srt->current_process->last_burst_time = 0;
+            srt->current_process->preempt_remaining_time = 0;
+            if (srt->current_process->io_bursts[0] > 0) {
+                int block_until = srt->current_time + srt->context_switching + srt->current_process->io_bursts[0];
+                int tau_n = (int)ceil(srt->x * srt->alpha + (1 - srt->alpha) * srt->lengths[srt->current_process - srt->queue[0]]);
+                if (srt->current_time < 10000) {
+                    printf("time %dms: Recalculated tau for process %s: old tau %dms ==> new tau %dms [Q", srt->current_time, srt->current_process->pid, srt->lengths[srt->current_process - srt->queue[0]], tau_n);
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        printf(" %s", srt->ready[i]->pid);
+                    }
+                    printf("]\n");
+                }
+                srt->lengths[srt->current_process - srt->queue[0]] = tau_n;
+                if (srt->current_time < 10000) {
+                    printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms [Q", srt->current_time, srt->current_process->pid, block_until);
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        printf(" %s", srt->ready[i]->pid);
+                    }
+                    printf("]\n");
+                }
+                io_place(srt, srt->current_process, block_until);
+                srt->current_process = NULL;
+            } else {
+                int wait_sum = 0;
+                if (srt->current_process->is_cpu_bound) {
+                    srt->cpu_bound_context_switches += srt->current_process->context_switches;
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        wait_sum += fmax(srt->current_process->waiting_time[i] - 1, 0);
+                    }
+                    srt->cpu_bound_wait_time_total += fmax(wait_sum - srt->current_process->context_switches + srt->current_process->cpu_bursts[0], 0);
+                    srt->cpu_bound_turn_time_total += (wait_sum + srt->current_process->total_burst_time + srt->context_switch * srt->current_process->cpu_bursts[0]);
+                } else {
+                    srt->io_bound_context_switches += srt->current_process->context_switches;
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        wait_sum += fmax(srt->current_process->waiting_time[i] - 1, 0);
+                    }
+                    srt->io_bound_wait_time_total += fmax(wait_sum - srt->current_process->context_switches + srt->current_process->cpu_bursts[0], 0);
+                    srt->io_bound_turn_time_total += (wait_sum + srt->current_process->total_burst_time + srt->context_switch * srt->current_process->cpu_bursts[0]);
+                }
+                printf("time %dms: Process %s terminated [Q", srt->current_time, srt->current_process->pid);
+                for (int i = 0; i < srt->ready_size; i++) {
+                    printf(" %s", srt->ready[i]->pid);
+                }
+                printf("]\n");
+                srt->current_process = NULL;
+            }
+        }
+    }
+}
+
+void io_place(SRT *srt, process *proc, int block) {
+    for (int i = 0; i < srt->io_list_size; i++) {
+        process *p = srt->io_list[i];
+        int block_until = srt->current_time + srt->context_switching + p->io_bursts[0];
+        if (block < block_until) {
+            for (int j = srt->io_list_size; j > i; j--) {
+                srt->io_list[j] = srt->io_list[j - 1];
+            }
+            srt->io_list[i] = proc;
+            srt->io_list_size++;
+            return;
+        }
+        if (block == block_until) {
+            if (strcmp(proc->pid, p->pid) < 0) {
+                for (int j = srt->io_list_size; j > i; j--) {
+                    srt->io_list[j] = srt->io_list[j - 1];
+                }
+                srt->io_list[i] = proc;
+                srt->io_list_size++;
+                return;
+            }
+            srt->io_list[i + 1] = proc;
+            srt->io_list_size++;
+            return;
+        }
+    }
+    srt->io_list[srt->io_list_size++] = proc;
+}
+
+void io_burst(SRT *srt) {
+    for (int i = 0; i < srt->io_list_size; i++) {
+        process *p = srt->io_list[i];
+        int block_until = srt->current_time + srt->context_switching + p->io_bursts[0];
+        if (srt->current_time >= block_until) {
+            p->io_bursts++;
+            int rem_time = -1;
+            if (srt->current_process != NULL) {
+                rem_time = srt->lengths[srt->current_process - srt->queue[0]] - (srt->current_time + srt->context_switch - srt->cpu_burst_start_time);
+                if (srt->current_process->preempt_remaining_time != 0) {
+                    rem_time = srt->current_process->preempt_remaining_time - srt->current_time + srt->cpu_burst_start_time;
+                }
+            }
+            if (srt->current_process != NULL && srt->lengths[p - srt->queue[0]] < rem_time && rem_time != -1) {
+                place_process(srt, p, srt->lengths[p - srt->queue[0]]);
+                if (srt->current_process->is_cpu_bound) {
+                    srt->cpu_bound_preemptions++;
+                } else {
+                    srt->io_bound_preemptions++;
+                }
+                if (srt->current_process->preempt_remaining_time == 0) {
+                    if (srt->current_time < 10000) {
+                        printf("time %dms: Process %s (tau %dms) completed I/O; preempting %s (predicted remaining time %dms) [Q", srt->current_time + srt->context_switching, p->pid, srt->lengths[p - srt->queue[0]], srt->current_process->pid, srt->lengths[srt->current_process - srt->queue[0]] - (srt->current_time - srt->cpu_burst_start_time));
+                        for (int i = 0; i < srt->ready_size; i++) {
+                            printf(" %s", srt->ready[i]->pid);
+                        }
+                        printf("]\n");
+                    }
+                    srt->current_process->preempt_remaining_time = srt->lengths[srt->current_process - srt->queue[0]] - (srt->current_time - srt->cpu_burst_start_time);
+                } else {
+                    if (srt->current_time < 10000) {
+                        printf("time %dms: Process %s (tau %dms) completed I/O; preempting %s (predicted remaining time %dms) [Q", srt->current_time + srt->context_switching, p->pid, srt->lengths[p - srt->queue[0]], srt->current_process->pid, srt->current_process->preempt_remaining_time - srt->current_time + srt->cpu_burst_start_time);
+                        for (int i = 0; i < srt->ready_size; i++) {
+                            printf(" %s", srt->ready[i]->pid);
+                        }
+                        printf("]\n");
+                    }
+                    srt->current_process->preempt_remaining_time -= (srt->current_time - srt->cpu_burst_start_time);
+                }
+                srt->queue_wait[srt->queue_wait_size++] = srt->current_process;
+                srt->current_process = NULL;
+                srt->context_switching += (srt->context_switch / 2);
+            } else {
+                place_process(srt, p, srt->lengths[p - srt->queue[0]]);
+                if (srt->current_time < 10000) {
+                    printf("time %dms: Process %s (tau %dms) completed I/O; added to ready queue [Q", srt->current_time + srt->context_switching, p->pid, srt->lengths[p - srt->queue[0]]);
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        printf(" %s", srt->ready[i]->pid);
+                    }
+                    printf("]\n");
+                }
+            }
+            for (int j = i; j < srt->io_list_size - 1; j++) {
+                srt->io_list[j] = srt->io_list[j + 1];
+            }
+            srt->io_list_size--;
+            i--;
+        }
+    }
+}
+
+void run(SRT *srt) {
+    printf("time %dms: Simulator started for SRT [Q", srt->current_time);
+    for (int i = 0; i < srt->ready_size; i++) {
+        printf(" %s", srt->ready[i]->pid);
+    }
+    printf("]\n");
     
-    def io_place(self, proc, block): #Helper function to place processes on the i/o queue based on their name and i/o block end time
-        for i in range(len(self.io_list)):
-            process = self.io_list[i][0]
-            block_until = self.io_list[i][1]
-            if block < block_until: #If we're before another process
-                self.io_list.insert(i, (proc, block))
-                return
-            if block == block_until: #If our process will unblock at the same time as another one
-                if proc.pid < process.pid:
-                    self.io_list.insert(i, (proc, block))
-                    return
-                self.io_list.insert(i+1, (proc, block))
-                return
-        self.io_list.append((proc, block)) #If we have not found a process that we go before or tie with, then just put us at the end
+    while (srt->queue_size > 0 || srt->ready_size > 0 || srt->current_process != NULL || srt->io_list_size > 0 || srt->context_switching > 0) {
+        if (srt->io_list_size > 0) {
+            io_burst(srt);
+        }
+        check_arrival(srt);
+        srt->current_time++;
+        if (srt->queue_wait_size > 0) {
+            for (int i = 0; i < srt->queue_wait_size; i++) {
+                if (srt->queue_wait[i] != NULL) {
+                    place_process(srt, srt->queue_wait[i], srt->lengths[srt->queue_wait[i] - srt->queue[0]]);
+                    srt->queue_wait[i] = NULL;
+                }
+            }
+        }
+        if (srt->context_switching > 0) {
+            srt->context_switching--;
+            srt->time_context_switching++;
+        } else if (srt->current_process == NULL && srt->ready_size > 0) {
+            srt->current_process = srt->ready[0];
+            for (int i = 0; i < srt->ready_size - 1; i++) {
+                srt->ready[i] = srt->ready[i + 1];
+            }
+            srt->ready_size--;
+            srt->context_switching = fmax((srt->context_switch / 2) - 1, 0);
+            if (srt->current_process->last_burst_time != 0 && srt->current_process->last_burst_time != srt->current_process->cpu_bursts[0]) {
+                if (srt->current_time < 10000) {
+                    printf("time %dms: Process %s (tau %dms) started using the CPU for remaining %dms of %dms burst [Q", srt->current_time + srt->context_switching, srt->current_process->pid, srt->lengths[srt->current_process - srt->queue[0]], srt->current_process->cpu_bursts[0], srt->current_process->last_burst_time);
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        printf(" %s", srt->ready[i]->pid);
+                    }
+                    printf("]\n");
+                }
+            } else {
+                if (srt->current_time < 10000) {
+                    printf("time %dms: Process %s (tau %dms) started using the CPU for %dms burst [Q", srt->current_time + srt->context_switching, srt->current_process->pid, srt->lengths[srt->current_process - srt->queue[0]], srt->current_process->cpu_bursts[0]);
+                    for (int i = 0; i < srt->ready_size; i++) {
+                        printf(" %s", srt->ready[i]->pid);
+                    }
+                    printf("]\n");
+                }
+                srt->current_process->last_burst_time = srt->current_process->cpu_bursts[0];
+            }
+            srt->cpu_burst_start_time = srt->current_time + srt->context_switching;
+            srt->current_process->context_switches++;
+            srt->current_process->waiting_time[srt->current_process->cpu_bursts[0]] += (srt->current_time - srt->current_process->last_ready_time);
+            srt->x = srt->current_process->cpu_bursts[0];
+            if (srt->current_process->last_burst_time != 0) {
+                srt->x = srt->current_process->last_burst_time;
+            }
+        } else if (srt->current_process != NULL) {
+            cpu_burst(srt);
+        }
+    }
+    printf("time %dms: Simulator ended for SRT [Q", srt->current_time);
+    for (int i = 0; i < srt->ready_size; i++) {
+        printf(" %s", srt->ready[i]->pid);
+    }
+    printf("]\n");
+}
 
-    def io_burst(self):
-        for process, block_until in self.io_list:
-            if self.current_time >= block_until:
-                process.io_bursts.pop(0)
-                rem_time = -1
-                if(self.current_process != None):
-                    rem_time = self.lengths[self.current_process] - (self.current_time + self.context_switch - self.cpu_burst_start_time)
-                    if(self.current_process.preempt_remaining_time != 0):
-                        rem_time = self.current_process.preempt_remaining_time - self.current_time +  self.cpu_burst_start_time
-                if(self.current_process != None and self.lengths[process] < rem_time and rem_time != -1):
-                    #switch process onto queue
-                    #subtract the current proocess' tau by the amount of time it spent on the queue.
-                    #self.lengths[self.current_process] -= (self.current_time - self.cpu_burst_start_time)
-                    #preempt a process onto the queue by placing a new process onto the queue and setting the current one to 0.
-                    self.place_process(process, self.lengths[process])
-                    if(self.current_process.is_cpu_bound):
-                        self.cpu_bound_preemptions += 1
-                    else:
-                        self.io_bound_preemptions += 1
-                    if(self.current_process.preempt_remaining_time == 0):
-                        if(self.current_time < 10000):
-                            print(f"time {self.current_time + self.context_switching}ms: Process {process.pid} (tau {self.lengths[process]}ms) completed I/O; preempting {self.current_process.pid} (predicted remaining time {self.lengths[self.current_process] - (self.current_time - self.cpu_burst_start_time)}ms) {self.queue_print()}")
-                        self.current_process.preempt_remaining_time = self.lengths[self.current_process] - (self.current_time - self.cpu_burst_start_time)
-                    else:
-                        if(self.current_time < 10000):
-                            print(f"time {self.current_time + self.context_switching}ms: Process {process.pid} (tau {self.lengths[process]}ms) completed I/O; preempting {self.current_process.pid} (predicted remaining time {self.current_process.preempt_remaining_time - self.current_time + self.cpu_burst_start_time}ms) {self.queue_print()}")
-                        self.current_process.preempt_remaining_time -= (self.current_time - self.cpu_burst_start_time)
-                    #self.place_process(self.current_process, self.lengths[self.current_process])
-                    heapq.heappush(self.queue_wait, (self.current_time + self.context_switch // 2, self.current_process))
-                    #self.current_process.waiting_time[len(self.current_process.static_cpu_bursts) - len(self.current_process.cpu_bursts)] += (self.context_switch // 2)
-                    self.current_process = None
-                    self.context_switching += (self.context_switch // 2)
-                else:
-                    self.place_process(process, self.lengths[process])
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time + self.context_switching}ms: Process {process.pid} (tau {self.lengths[process]}ms) completed I/O; added to ready queue {self.queue_print()}")
-                self.io_list.remove((process, block_until))
-                #print(self.__str__())
+int main() {
 
-    def run(self):
-        print(f"time {self.current_time + self.context_switching}ms: Simulator started for SRT {self.queue_print()}")
-        
-        while len(self.queue) > 0 or len(self.ready) > 0 or self.current_process is not None or len(self.io_list) > 0 or self.context_switching > 0:
-            if len(self.io_list) > 0:
-                self.io_burst()
-            self.check_arrival()
-            self.current_time += 1
-            if len(self.queue_wait) > 0:
-                for i in range(len(self.queue_wait)):
-                    if self.queue_wait[i][0] == self.current_time:
-                        self.place_process(self.queue_wait[i][1], self.lengths[self.queue_wait[i][1]])
-                        self.queue_wait.pop(i)
-            #for i in range(len(self.ready)):
-                #self.ready[i].waiting_time[len(self.ready[i].static_cpu_bursts) - len(self.ready[i].cpu_bursts)] += 1
-            if self.context_switching > 0:
-                self.context_switching -= 1
-                self.time_context_switching += 1
-            elif self.current_process is None and len(self.ready) > 0:
-                self.current_process = self.ready.pop(0)
-                self.context_switching = max((self.context_switch // 2) - 1, 0)
-                if(self.current_process.last_burst_time != 0 and self.current_process.last_burst_time != self.current_process.cpu_bursts[0]):
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time + self.context_switching}ms: Process {self.current_process.pid} (tau {self.lengths[self.current_process]}ms) started using the CPU for remaining {self.current_process.cpu_bursts[0]}ms of {self.current_process.last_burst_time}ms burst {self.queue_print()}")
-                else:
-                    if(self.current_time < 10000):
-                        print(f"time {self.current_time + self.context_switching}ms: Process {self.current_process.pid} (tau {self.lengths[self.current_process]}ms) started using the CPU for {self.current_process.cpu_bursts[0]}ms burst {self.queue_print()}")
-                    self.current_process.last_burst_time = self.current_process.cpu_bursts[0]
-                self.cpu_burst_start_time = self.current_time + self.context_switching
-                self.current_process.context_switches += 1
-                self.current_process.waiting_time[len(self.current_process.static_cpu_bursts) - len(self.current_process.cpu_bursts)] += (self.current_time - self.current_process.last_ready_time)
-                self.x = self.current_process.cpu_bursts[0]
-                if(self.current_process.last_burst_time != 0):
-                    self.x = self.current_process.last_burst_time
-                #print(self.__str__())
-            elif self.current_process is not None:
-                self.cpu_burst()
-            else: #TODO: Remove
-                inserted = self.check_arrival()
-                if (inserted != None and self.current_process != None and self.lengths[inserted] < self.lengths[self.current_process]):
-                    #preempt a process onto the queue (this may never happen??)
-                    self.place_process(self.current_process, self.lengths[self.current_process])
-                    print(f"time {self.current_time + self.context_switching}ms: Process {self.current_process.pid} preempted by Process {process.pid} {self.queue_print()}")
-                    self.queue.remove(inserted)
-                    self.current_process = inserted
-                    self.context_switching =  max((self.context_switch // 2) - 1, 0)
-                    self.x = self.current_process.cpu_bursts[0]
-                
-                
-            if self.current_time % 500 == 0:
-                #print(f"time {self.current_time}ms: State: {self.__str__()}")
-                pass
-            
-        print(f"time {self.current_time + self.context_switching}ms: Simulator ended for SRT {self.queue_print()}")
-            
-    def queue_print(self):
-        return f"[Q {' '.join(p.pid for p in self.ready) if self.ready else 'empty'}]"
+    // Process initialization
+    process p1 = {"P1", 0, (int[]){8, 5, 2}, (int[]){10, 15}, 1, 0, 0, 0, 0, 15, NULL, (int[]){8, 5, 2}};
+    process p2 = {"P2", 2, (int[]){6, 4, 3}, (int[]){7, 8}, 0, 0, 0, 0, 0, 13, NULL, (int[]){6, 4, 3}};
+    process *queue[] = {&p1, &p2};
 
-    def __str__(self) -> str:
-        s = "<<< CURRENT STATE\n"
-        s += f"[{' '.join(p.pid for p in self.queue)}]\n"
-        s += f"[{' '.join(p.pid for p in self.ready)}]\n"
-        s += f"[{' '.join(f'{p.pid} (until {t}ms)' for p, t in self.io_list)}]\n"
-        s += f"{self.current_process.pid if self.current_process else 'None'}"
-        return s
+    // SRT initialization
+    SRT srt;
+    init_srt(&srt, queue, 2, 8, 2, 1);
+
+    // Running the simulation
+    run(&srt);
+
+    // Free allocated memory
+    free(srt.ready);
+    free(srt.io_list);
+    free(srt.lengths);
+    free(srt.queue_wait);
+
+    return 0;
+}
