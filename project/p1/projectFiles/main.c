@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
 
 
     FCFS(processes, n_processes, tcs, output,n_cpu, n_processes-n_cpu);
-    // RR(processes, n_processes, tcs, Tslice, output, n_cpu, n_processes-n_cpu);
+    RR(processes, n_processes, tcs, Tslice, output, n_cpu, n_processes-n_cpu);
 
     
     
