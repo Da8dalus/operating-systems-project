@@ -68,6 +68,22 @@ void RR(Process *givenProcesses, int n_process, int tcs, int tslice, FILE *outpu
     int queue_size = 0;
     bool process_preempted = false;
 
+     //stat counters
+    // double cpu_activetime = 0;
+    
+    // double cpuBound_waittime = 0;
+    // double cpu_waittime = 0;
+    // double io_waittime = 0;
+    // double ioBound_waittime = 0;
+
+    // double cpuTurnaround = 0;
+    // double ioTurnaround = 0;
+    // double cpuTurn_Count = 0;
+    // double ioTurn_Count = 0;
+
+    // int cpuContext = 0;
+    // int ioContext = 0;
+
     Process_helper *queue = calloc(0, sizeof(Process_helper));  // Start with an empty queue
     Process_helper *current_process = NULL; // To track the current process using the CPU
     Process_helper *previous_process = calloc(0, sizeof(Process_helper));
