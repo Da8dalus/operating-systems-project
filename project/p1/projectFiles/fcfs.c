@@ -20,6 +20,7 @@ typedef struct {
     int fcfs_blockedio;
     int time_queuestart;
     int time_tcs;
+    // int timeinqueue;
 } Process_helper;
 
 int starter_compare(const void *a, const void *b) {
@@ -114,35 +115,27 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 current_process->index++;
 
                 // Completion message
-                if (time < 10000) {
+                // if (time < 10000) {
                     printf("time %dms: Process %s completed a CPU burst; %d bursts to go ",
                         time, current_process->process->id, current_process->process->numBursts - current_process->index);
                     print_queue(queue, queue_size);
-                }
+                // }
 
                 // Check if the process has more bursts left
                 if (current_process->index < current_process->process->numBursts) {
                     // Blocking on I/O
                     int **cpu_io_bursts = current_process->process->cpu_io_bursts;
                     if (*(*(cpu_io_bursts + current_process->index - 1) + 1) > 0) {  // Correct index for I/O burst
-                        // if(queue_size == 0){
-                            current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs/2;
-                        // }
-                            // current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs;
+
+                        current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs/2;
                         
                         
-                        if (time < 10000) {
+                        // if (time < 10000) {
                             printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ",
                                 time, current_process->process->id, current_process->fcfs_blockedio);
                             print_queue(queue, queue_size);
-                        }
+                        // }
 
-                        if(current_process->process->cpu_bound){
-
-                            cpuTurn_Count++;
-                        }else{
-                            ioTurn_Count++;
-                        }
                         ///need to add some way to use context switch
 
                         // Add current_process to previous_process array
@@ -162,11 +155,6 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 
                 if(queue_size > 0){
                     queue->time_tcs += tcs/2 + 1;
-                    // if(queue->process->cpu_bound){
-                    //     cpuTurnaround += tcs / 2;
-                    // }else{
-                    //     ioTurnaround += tcs/2;
-                    // }
                 }
 
                 free(current_process);
@@ -204,30 +192,41 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 Process *p = current_process->process;
 
                 //waittime calculations
-                // if(p->cpu_bound){
-                //     cpuTurnaround += tcs/2;
-                //     cpuContext++;
-                //     cpu_waittime += time - current_process->time_queuestart;
-                //     cpuBound_waittime++;
-                // }else{
-                //     ioTurnaround += tcs/2;
-                //     ioContext++;
-                //     io_waittime += time - current_process->time_queuestart;
-                //     ioBound_waittime++;
-                // }
+                if(p->cpu_bound){
+                    // cpuTurnaround += tcs/2;
+                    // cpuContext++;
+                    cpu_waittime += time - current_process->time_queuestart;
+                    cpuBound_waittime++;
+                }else{
+                    // ioTurnaround += tcs/2;
+                    // ioContext++;
+                    
+                    io_waittime += time - current_process->time_queuestart;
+                    ioBound_waittime++;
+                }
+
+
+                if(current_process->process->cpu_bound){
+                    cpuTurn_Count++;
+                }else{
+                    ioTurn_Count++;
+                }
+                
+                int waittime = time - current_process->time_queuestart;
                 current_process->time_queuestart = 0;
 
                 int **cpu_io_bursts = p->cpu_io_bursts;
 
-                if (time < 10000) {
+                // if (time < 10000) {
                     printf("time %dms: Process %s started using the CPU for %dms burst ",
                            time, p->id, *(*(cpu_io_bursts + current_process->index) + 0));
                     print_queue(queue, queue_size);
-                }
+                // }
+
                 if(p->cpu_bound){
-                    cpuTurnaround += *(*(cpu_io_bursts + current_process->index) + 0)+ tcs;
+                    cpuTurnaround += *(*(cpu_io_bursts + current_process->index) + 0) + waittime;
                 }else{
-                    ioTurnaround += *(*(cpu_io_bursts + current_process->index) + 0) + tcs;
+                    ioTurnaround += *(*(cpu_io_bursts + current_process->index) + 0)  + waittime;
                 }
 
                 
@@ -241,14 +240,11 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
         for (int n = 0; n < previous_size; n++) {
             Process_helper *previous = previous_process + n;
             if (time == previous->fcfs_blockedio) {
+
                 // Increase the queue size
                queue_size++;
                previous->time_tcs = tcs/2;
-            //    if(previous->process->cpu_bound){
-            //     cpuTurnaround += tcs/2;
-            //    }else{
-            //     ioTurnaround += tcs/2;
-            //    }
+               previous->time_queuestart = time + tcs/2;
 
                 
                 
@@ -263,13 +259,13 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 
                 *(queue + queue_size - 1) = *previous;
 
-                if (time < 10000) {
+                // if (time < 10000) {
                     printf("time %dms: Process %s completed I/O; added to ready queue ",
                            time, previous->process->id);
                     print_queue(queue, queue_size);
-                }
+                // }
 
-                previous->time_queuestart = time;
+                
 
                 // Remove the process from previous_process array
                 for (int j = n; j < previous_size - 1; j++) {
@@ -294,8 +290,9 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 visited_count++;
                 P->fcfs_blockedio = 0;
                 P->index = 0;
-                P->time_queuestart = time;
+                P->time_queuestart = time + tcs/2;
                 P->time_tcs = tcs/2;
+
 
                 // printf("%s time_tcs = %d\n", process->id, P->time_tcs);
                 // if(process->cpu_bound){
@@ -316,10 +313,10 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 
                 // Add the new process to the end of the queue
                 *(queue + queue_size - 1) = *P;
-                if (time < 10000) {
+                // if (time < 10000) {
                     printf("time %dms: Process %s arrived; added to ready queue ", time, process->id);
                     print_queue(queue, queue_size);
-                }
+                // }
             }
         }
 
@@ -344,11 +341,13 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
     double cpu_utilization = cpu_activetime / time *100;
     printf("active time %f\n", cpu_activetime / time);
     double cpu_boundavgTurn = cpuTurnaround/cpuTurn_Count;
+    
     double io_boundavgTurn = ioTurnaround / ioTurn_Count;
     double overallavgTurn = (cpuTurnaround + ioTurnaround)/(cpuTurn_Count + ioTurn_Count);
 
-    double cpu_avgWait = cpu_waittime/ cpuContext;
-    double io_avgWait = io_waittime / ioContext;
+    double cpu_avgWait = cpu_waittime/ cpuBound_waittime;
+    printf("cpuavgWait: %f\n",cpu_waittime);
+    double io_avgWait = io_waittime / ioBound_waittime;
     double overallavgWait = (cpu_waittime + io_waittime)/(cpuBound_waittime + ioBound_waittime);
 
     if(cpuTurn_Count == 0){
@@ -390,11 +389,11 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 // -- overall number of preemptions: 0
 
     fprintf(output,"\nAlgorithm FCFS\n");
-    printf("%.3f", cpuTurnaround);
+    printf("%.3f\n", cpuTurnaround);
 
     fprintf(output, "-- CPU utilization: %.3f%%\n", cpu_utilization);
-    fprintf(output, "-- CPU-bound average wait time: %.3f\n", cpu_avgWait);
-    fprintf(output, "-- I/O-bound average wait time: %.3f\n", io_avgWait);
+    fprintf(output, "-- CPU-bound average wait time: %.3f ms\n", cpu_avgWait);
+    fprintf(output, "-- I/O-bound average wait time: %.3f ms\n", io_avgWait);
     fprintf(output, "-- overall average wait time: %.3f ms\n", overallavgWait);
     fprintf(output, "-- CPU-bound average turnaround time: %.3f ms\n", cpu_boundavgTurn);
     fprintf(output, "-- I/O-bound average turnaround time: %.3f ms\n", io_boundavgTurn);
