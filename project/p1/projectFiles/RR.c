@@ -268,7 +268,7 @@ typedef struct {
     int time_queuestart;
     int time_tcs;
     int time_slice;
-    int remaining_time;
+    int** cpu_io_bursts_copy;
 } Process_helper;
 
 int starter_compareRR(const void *a, const void *b) {
@@ -313,7 +313,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
         p->time_queuestart = 0;
         p->time_tcs = 0;
         p->time_slice = 0;
-        p->remaining_time = 0;
+        p->cpu_io_bursts_copy = p->process->cpu_io_bursts;
     }
 
     if(n_cpuBound + n_ioBound != n_process){
@@ -362,8 +362,13 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
         // (a) CPU burst completion
         if (current_process != NULL) {
             if(time != process_end_cpu_at && current_process->time_slice == 0){
-                current_process->remaining_time -= timeslice;
-                printf("time %dms: Time slice expired; Process %s requeued with %dms remaining",time, current_process->process->id, current_process->remaining_time);
+                printf()
+                int** cpu_bursts = current_process->cpu_io_bursts_copy;
+                //at the index of cpu bursts decrement by time slice
+                //time_slice restarts
+                //time_tcs if other in queue
+                //
+                printf("time %dms: Time slice expired; Process %s requeued with %dms remaining\n",time, current_process->process->id, current_process->);
 
                 
                 //move current to end and start anew
@@ -393,6 +398,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
             }else if(time != process_end_cpu_at && current_process->time_slice > 0){
                 current_process->time_slice--;
             }else if (time == process_end_cpu_at) {
+                printf("here\n");
                 current_process->index++;
 
                 // Completion message
@@ -581,7 +587,6 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 P->time_queuestart = time + tcs/2;
                 P->time_tcs = tcs/2;
                 P->time_slice = timeslice;
-                P->remaining_time = 0;
 
 
                 // printf("%s time_tcs = %d\n", process->id, P->time_tcs);
@@ -612,6 +617,9 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
 
         if(visited_count < n_process || queue_size > 0 || current_process != NULL || previous_size > 0){
             time++;
+        }
+        if(time == 1000){
+            abort();
         }
         
         
