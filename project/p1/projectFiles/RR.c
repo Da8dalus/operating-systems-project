@@ -24,7 +24,7 @@
 //     int time_slice_left;  // Remaining time in the current time slice
 // } Process_helper;
 
-// int starter_compare_rr(const void *a, const void *b) {
+// int starter_compareRR_rr(const void *a, const void *b) {
 //     Process_helper *ph1 = (Process_helper *)a;
 //     Process_helper *ph2 = (Process_helper *)b;
 //     if ((*ph1).process->arrival == (*ph2).process->arrival) {
@@ -33,7 +33,7 @@
 //     return (*ph1).process->arrival - (*ph2).process->arrival;
 // }
 
-// void print_queue_rr(Process_helper *queue, int queue_count) {
+// void print_queueRR_rr(Process_helper *queue, int queue_count) {
 //     if (queue_count == 0) {
 //         printf("[Q empty]\n");
 //     } else {
@@ -60,7 +60,7 @@
 //     }
 
 //     // Sort unvisited processes by arrival time
-//     qsort(unvisited, n_process, sizeof(Process_helper), starter_compare_rr);
+//     qsort(unvisited, n_process, sizeof(Process_helper), starter_compareRR_rr);
 
 //     int visited_count = 0;
 //     int time = 0;
@@ -109,7 +109,7 @@
 //                             current_process->rr_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs / 2;
 //                             printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ",
 //                                    time, current_process->process->id, current_process->rr_blockedio);
-//                             print_queue_rr(queue, queue_size);
+//                             print_queueRR_rr(queue, queue_size);
 
 //                             // Add current_process to previous_process array
 //                             previous_size++;
@@ -123,7 +123,7 @@
 //                     } else {
 //                         // Termination message
 //                         printf("time %dms: Process %s terminated ", time, current_process->process->id);
-//                         print_queue_rr(queue, queue_size);
+//                         print_queueRR_rr(queue, queue_size);
 //                     }
 //                     free(current_process);
 //                     current_process = NULL;
@@ -137,7 +137,7 @@
 //                     *(queue + queue_size - 1) = *current_process;
 //                     printf("time %dms: Time slice expired; process %s requeued with %dms remaining ",
 //                            time, current_process->process->id, current_process->remaining_time);
-//                     print_queue_rr(queue, queue_size);
+//                     print_queueRR_rr(queue, queue_size);
 //                     process_preempted = false;
                     
 //                     free(current_process);
@@ -177,7 +177,7 @@
 
 //                 printf("time %dms: Process %s started using the CPU for %dms burst ",
 //                        time, p->id, run_time);
-//                 print_queue_rr(queue, queue_size);
+//                 print_queueRR_rr(queue, queue_size);
 //             }
 //         }
 
@@ -191,7 +191,7 @@
 //                 *(queue + queue_size - 1) = *previous;
 
 //                 printf("time %dms: Process %s completed I/O; added to ready queue ", time, previous->process->id);
-//                 print_queue_rr(queue, queue_size);
+//                 print_queueRR_rr(queue, queue_size);
 
 //                 // Remove the process from previous_process array
 //                 for (int j = n; j < previous_size - 1; j++) {
@@ -224,7 +224,7 @@
 //                 *(queue + queue_size - 1) = *P;
 
 //                 printf("time %dms: Process %s arrived; added to ready queue ", time, process->id);
-//                 print_queue_rr(queue, queue_size);
+//                 print_queueRR_rr(queue, queue_size);
 //             }
 //         }
 
@@ -236,7 +236,7 @@
 //     }
 
 //     printf("time %dms: Simulator ended for RR ", time + tcs / 2);
-//     print_queue_rr(queue, queue_size);
+//     print_queueRR_rr(queue, queue_size);
 
 //     // Free allocated memory
 //     free(queue);
@@ -271,7 +271,7 @@ typedef struct {
     int remaining_time;
 } Process_helper;
 
-int starter_compare(const void *a, const void *b) {
+int starter_compareRR(const void *a, const void *b) {
     Process_helper *ph1 = (Process_helper *)a;
     Process_helper *ph2 = (Process_helper *)b;
     if ((*ph1).process->arrival == (*ph2).process->arrival) {
@@ -281,7 +281,7 @@ int starter_compare(const void *a, const void *b) {
 }
 
 
-int backtoqueue_comparer(const void *a, const void *b) {
+int backtoqueue_comparerRR(const void *a, const void *b) {
     Process_helper *ph1 = (Process_helper *)a;
     Process_helper *ph2 = (Process_helper *)b;
     if((*ph1).fcfs_blockedio == (*ph2).fcfs_blockedio){
@@ -290,7 +290,7 @@ int backtoqueue_comparer(const void *a, const void *b) {
     return (*ph1).fcfs_blockedio - (*ph2).fcfs_blockedio;
 }
 
-void print_queue(Process_helper *queue, int queue_count) {
+void print_queueRR(Process_helper *queue, int queue_count) {
     if (queue_count == 0) {
         printf("[Q empty]\n");
     } else {
@@ -322,7 +322,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
     }
 
     // Sort unvisited processes by arrival time
-    qsort(unvisited, n_process, sizeof(Process_helper), starter_compare);
+    qsort(unvisited, n_process, sizeof(Process_helper), starter_compareRR);
 
     int visited_count = 0;
     int time = 0;
@@ -399,7 +399,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 // if (time < 10000) {
                     printf("time %dms: Process %s completed a CPU burst; %d bursts to go ",
                         time, current_process->process->id, current_process->process->numBursts - current_process->index);
-                    print_queue(queue, queue_size);
+                    print_queueRR(queue, queue_size);
                 // }
 
                 // Check if the process has more bursts left
@@ -415,7 +415,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                         // if (time < 10000) {
                             printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ",
                                 time, current_process->process->id, current_process->fcfs_blockedio);
-                            print_queue(queue, queue_size);
+                            print_queueRR(queue, queue_size);
                         // }
 
                         ///need to add some way to use context switch
@@ -432,7 +432,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 } else {
                     // Termination message
                     printf("time %dms: Process %s terminated ", time, current_process->process->id);
-                    print_queue(queue, queue_size);
+                    print_queueRR(queue, queue_size);
                 }
                 
                 if(queue_size > 0){
@@ -508,7 +508,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 // if (time < 10000) {
                     printf("time %dms: Process %s started using the CPU for %dms burst ",
                            time, p->id, *(*(cpu_io_bursts + current_process->index) + 0));
-                    print_queue(queue, queue_size);
+                    print_queueRR(queue, queue_size);
                 // }
 
                 if(p->cpu_bound){
@@ -524,7 +524,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
         }
 
         // (c) I/O burst completions so add back to queue
-        qsort(previous_process,previous_size, sizeof(Process_helper), backtoqueue_comparer);
+        qsort(previous_process,previous_size, sizeof(Process_helper), backtoqueue_comparerRR);
         for (int n = 0; n < previous_size; n++) {
             Process_helper *previous = previous_process + n;
             if (time == previous->fcfs_blockedio) {
@@ -550,7 +550,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 // if (time < 10000) {
                     printf("time %dms: Process %s completed I/O; added to ready queue ",
                            time, previous->process->id);
-                    print_queue(queue, queue_size);
+                    print_queueRR(queue, queue_size);
                 // }
 
                 
@@ -605,7 +605,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 *(queue + queue_size - 1) = *P;
                 // if (time < 10000) {
                     printf("time %dms: Process %s arrived; added to ready queue ", time, process->id);
-                    print_queue(queue, queue_size);
+                    print_queueRR(queue, queue_size);
                 // }
             }
         }
@@ -618,7 +618,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
     }
 
     printf("time %dms: Simulator ended for FCFS ", time + tcs/2);
-    print_queue(queue, queue_size);
+    print_queueRR(queue, queue_size);
 
 
     // Free allocated memory
