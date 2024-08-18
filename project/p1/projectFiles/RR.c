@@ -362,13 +362,23 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
         // (a) CPU burst completion
         if (current_process != NULL) {
             if(time != process_end_cpu_at && current_process->time_slice == 0){
-                printf()
                 int** cpu_bursts = current_process->cpu_io_bursts_copy;
                 //at the index of cpu bursts decrement by time slice
+                if(*(*(cpu_bursts + current_process->index) + 0) > current_process->time_slice){
+                    *(*(cpu_bursts + current_process->index) + 0) -= current_process->time_slice;
                 //time_slice restarts
+                    current_process->time_slice = timeslice;
                 //time_tcs if other in queue
+                    if(queue_size > 0){
+                        queue->time_tcs += tcs/2 + 1;
+                    }
+                }else{
+                    current_process->time_slice -= *(*(cpu_bursts + current_process->index) + 0);
+                    *(*(cpu_bursts + current_process->index) + 0) = 0;
+                }
                 //
-                printf("time %dms: Time slice expired; Process %s requeued with %dms remaining\n",time, current_process->process->id, current_process->);
+                printf("time %dms: Time slice expired; Process %s requeued with %dms remaining\n", time, current_process->process->id, *(*(current_process->cpu_io_bursts_copy + current_process->index) + 0));
+
 
                 
                 //move current to end and start anew
@@ -415,7 +425,8 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                     if (*(*(cpu_io_bursts + current_process->index - 1) + 1) > 0) {  // Correct index for I/O burst
 
                         current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs/2;
-                        current_process->remaining_time = current_process->fcfs_blockedio;
+                        *(*(current_process->cpu_io_bursts_copy + current_process->index - 1) + 1) = current_process->fcfs_blockedio;
+
                         
                         
                         // if (time < 10000) {
