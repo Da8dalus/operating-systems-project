@@ -172,6 +172,13 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 current_process = malloc(sizeof(Process_helper));
                 *current_process = *queue;
 
+                if(current_process->process->cpu_bound){
+                    
+                    cpuContext++;
+                }else{
+                    ioContext++;
+                }
+
 
                 // Shift all elements down one index
                 for (int i = 0; i < queue_size - 1; i++) {
@@ -207,6 +214,7 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 
 
                 if(current_process->process->cpu_bound){
+                    
                     cpuTurn_Count++;
                 }else{
                     ioTurn_Count++;
@@ -224,9 +232,9 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 // }
 
                 if(p->cpu_bound){
-                    cpuTurnaround += *(*(cpu_io_bursts + current_process->index) + 0) + waittime;
+                    cpuTurnaround += *(*(cpu_io_bursts + current_process->index) + 0) + waittime +tcs;
                 }else{
-                    ioTurnaround += *(*(cpu_io_bursts + current_process->index) + 0)  + waittime;
+                    ioTurnaround += *(*(cpu_io_bursts + current_process->index) + 0)  + waittime + tcs;
                 }
 
                 
@@ -389,7 +397,6 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 // -- overall number of preemptions: 0
 
     fprintf(output,"\nAlgorithm FCFS\n");
-    printf("%.3f\n", cpuTurnaround);
 
     fprintf(output, "-- CPU utilization: %.3f%%\n", cpu_utilization);
     fprintf(output, "-- CPU-bound average wait time: %.3f ms\n", cpu_avgWait);
