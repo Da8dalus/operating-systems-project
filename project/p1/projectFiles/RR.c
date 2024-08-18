@@ -461,7 +461,6 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
             }
         }
 
-
         // (b) Process starts using the CPU
         if (current_process == NULL && queue_size > 0) {
             queue->time_tcs--;
