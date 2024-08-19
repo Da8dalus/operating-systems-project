@@ -115,11 +115,11 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                 current_process->index++;
 
                 // Completion message
-                // if (time < 10000) {
+                if (time < 10000) {
                     printf("time %dms: Process %s completed a CPU burst; %d bursts to go ",
                         time, current_process->process->id, current_process->process->numBursts - current_process->index);
                     print_queue(queue, queue_size);
-                // }
+                }
 
                 // Check if the process has more bursts left
                 if (current_process->index < current_process->process->numBursts) {
@@ -130,11 +130,11 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
                         current_process->fcfs_blockedio = time + *(*(cpu_io_bursts + current_process->index - 1) + 1) + tcs/2;
                         
                         
-                        // if (time < 10000) {
+                        if (time < 10000) {
                             printf("time %dms: Process %s switching out of CPU; blocking on I/O until time %dms ",
                                 time, current_process->process->id, current_process->fcfs_blockedio);
                             print_queue(queue, queue_size);
-                        // }
+                        }
 
                         ///need to add some way to use context switch
 
@@ -225,11 +225,11 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 
                 int **cpu_io_bursts = p->cpu_io_bursts;
 
-                // if (time < 10000) {
+                if (time < 10000) {
                     printf("time %dms: Process %s started using the CPU for %dms burst ",
                            time, p->id, *(*(cpu_io_bursts + current_process->index) + 0));
                     print_queue(queue, queue_size);
-                // }
+                }
 
                 if(p->cpu_bound){
                     cpuTurnaround += *(*(cpu_io_bursts + current_process->index) + 0) + waittime +tcs;
@@ -267,11 +267,11 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 
                 *(queue + queue_size - 1) = *previous;
 
-                // if (time < 10000) {
+                if (time < 10000) {
                     printf("time %dms: Process %s completed I/O; added to ready queue ",
                            time, previous->process->id);
                     print_queue(queue, queue_size);
-                // }
+                }
 
                 
 
@@ -321,10 +321,10 @@ void FCFS(Process *givenProcesses, int n_process, int tcs, FILE *output, int n_c
 
                 // Add the new process to the end of the queue
                 *(queue + queue_size - 1) = *P;
-                // if (time < 10000) {
+                if (time < 10000) {
                     printf("time %dms: Process %s arrived; added to ready queue ", time, process->id);
                     print_queue(queue, queue_size);
-                // }
+                }
             }
         }
 
