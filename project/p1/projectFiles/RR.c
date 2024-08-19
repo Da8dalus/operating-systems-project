@@ -376,6 +376,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 
                 //
                 printf("time %dms: Time slice expired; Process %s requeued with %dms remaining\n", time, current_process->process->id, *(*(current_process->cpu_io_bursts_copy + current_process->index) + 0));
+                
 
 
                 
@@ -420,6 +421,11 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 // Reset the time slice for the requeued process
                 queue[queue_size - 1].time_slice = timeslice;
 
+                print_queueRR(queue, queue_size);
+                if(queue_size == 1){
+                    (queue)->time_tcs = 1;
+                }
+
                 // Free the current process pointer
                 free(current_process);
                 current_process = NULL;
@@ -430,7 +436,7 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
 
             }else if(time != process_end_cpu_at && current_process->time_slice > 0){
                 current_process->time_slice--;
-            }else if (time == process_end_cpu_at) {
+            }else if (time == process_end_cpu_at && current_process->time_slice > 0) {
                 printf("here\n");
                 current_process->index++;
 
