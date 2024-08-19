@@ -19,6 +19,7 @@ typedef struct {
     unsigned int tau;
     unsigned int totalPreempted;
     int remainingTime;
+    unsigned int numBursts;
 } Process;
 
 // Constructor equivalent in C

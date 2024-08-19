@@ -1,7 +1,7 @@
 #ifndef _OPERATION_H
 #define _OPERATION_H
 
-#include "process.h"
+#include "processC.h"
 
 // Operation types
 typedef enum {

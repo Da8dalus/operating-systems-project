@@ -17,10 +17,10 @@ void rr(Process *processes, int n_process, double t_cs, unsigned int t_slice, FI
 int process_compare(const void *a, const void *b) {
     Process *p1 = (Process *)a;
     Process *p2 = (Process *)b;
-    if (p1->arrival == p2->arrival) {
+    if (p1->arrivalTime == p2->arrivalTime) {
         return strcmp(p1->id, p2->id);
     }
-    return p1->arrival - p2->arrival;
+    return p1->arrivalTime - p2->arrivalTime;
 }
 
 // Helper function to print the process queue
@@ -59,7 +59,7 @@ void sjf(Process *processes, int n_process, double t_cs, double alpha, FILE *out
         op_queue_size++;
         op_queue = realloc(op_queue, op_queue_size * sizeof(Operation));
         op_queue[op_queue_size - 1].type = ARRIVE;
-        op_queue[op_queue_size - 1].time = processes[i].arrival;
+        op_queue[op_queue_size - 1].time = processes[i].arrivalTime;
         op_queue[op_queue_size - 1].process = &processes[i];
     }
 
@@ -103,7 +103,7 @@ void sjf(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                     printf("time %ums: Process %s (tau %ums) completed I/O; added to ready queue ", time, op.process->id, op.process->tau);
                 }
                 print_queue(ready_queue, ready_queue_size);
-                op.process->ready_queue_add_time = time;
+                op.process->readyQueueAddTime = time;
                 break;
 
             case DEQUEUE:
@@ -115,29 +115,29 @@ void sjf(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                 op_queue[op_queue_size - 1].time = time + (t_cs / 2);
                 op_queue[op_queue_size - 1].process = dq_proc;
 
-                if (dq_proc->cpu_bound) {
-                    cpu_bound_total_wait_time += time - dq_proc->ready_queue_add_time;
+                if (dq_proc->type) {
+                    cpu_bound_total_wait_time += time - dq_proc->readyQueueAddTime;
                 } else {
-                    io_bound_total_wait_time += time - dq_proc->ready_queue_add_time;
+                    io_bound_total_wait_time += time - dq_proc->readyQueueAddTime;
                 }
                 break;
 
             case BURST: {
-                unsigned int burst_time = dq_proc->cpu_io_bursts[dq_proc->index][0];
+                unsigned int burst_time = dq_proc->bursts[dq_proc->burstIndex][0];
                 printf("time %ums: Process %s (tau %ums) started using the CPU for %ums burst ", time, dq_proc->id, dq_proc->tau, burst_time);
                 print_queue(ready_queue, ready_queue_size);
-                dq_proc->burst_start_time = time;
+                dq_proc->burstStartTime = time;
 
                 op_queue_size++;
                 op_queue = realloc(op_queue, op_queue_size * sizeof(Operation));
                 op_queue[op_queue_size - 1].type = EXPIRE;
                 op_queue[op_queue_size - 1].time = time + burst_time;
                 op_queue[op_queue_size - 1].process = dq_proc;
-                dq_proc->current_burst_elapsed += burst_time;
+                dq_proc->currentBurstElapsed += burst_time;
 
                 cpu_time += burst_time;
 
-                if (dq_proc->cpu_bound) {
+                if (dq_proc->type) {
                     cpu_bound_cs_count++;
                 } else {
                     io_bound_cs_count++;
@@ -147,21 +147,21 @@ void sjf(Process *processes, int n_process, double t_cs, double alpha, FILE *out
 
             case EXPIRE: {
                 cpu_busy = false;
-                unsigned int actual_burst_time = time - dq_proc->burst_start_time;
+                unsigned int actual_burst_time = time - dq_proc->burstStartTime;
                 unsigned int old_tau = dq_proc->tau;
 
-                if (dq_proc->index >= dq_proc->numBursts - 1) {
+                if (dq_proc->burstIndex >= dq_proc->numBursts - 1) {
                     printf("time %ums: Process %s terminated ", time, dq_proc->id);
                     print_queue(ready_queue, ready_queue_size);
                 } else {
                     dq_proc->tau = ceil(alpha * actual_burst_time + (1.0 - alpha) * old_tau);
-                    printf("time %ums: Process %s (tau %ums) completed a CPU burst; %lu bursts to go ", time, dq_proc->id, old_tau, dq_proc->numBursts - dq_proc->index - 1);
+                    printf("time %ums: Process %s (tau %ums) completed a CPU burst; %lu bursts to go ", time, dq_proc->id, old_tau, dq_proc->numBursts - dq_proc->burstIndex - 1);
                     print_queue(ready_queue, ready_queue_size);
 
                     printf("time %ums: Recalculated tau for process %s: old tau %ums ==> new tau %ums ", time, dq_proc->id, old_tau, dq_proc->tau);
                     print_queue(ready_queue, ready_queue_size);
 
-                    unsigned int unblock_time = time + dq_proc->cpu_io_bursts[dq_proc->index][1] + (t_cs / 2);
+                    unsigned int unblock_time = time + dq_proc->bursts[dq_proc->burstIndex][1] + (t_cs / 2);
                     op_queue_size++;
                     op_queue = realloc(op_queue, op_queue_size * sizeof(Operation));
                     op_queue[op_queue_size - 1].type = IO_END;
@@ -169,8 +169,8 @@ void sjf(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                     op_queue[op_queue_size - 1].process = dq_proc;
                 }
 
-                dq_proc->current_burst_elapsed = 0;
-                dq_proc->index++;
+                dq_proc->currentBurstElapsed = 0;
+                dq_proc->burstIndex++;
                 time += t_cs / 2;
                 break;
             }
@@ -192,11 +192,11 @@ void sjf(Process *processes, int n_process, double t_cs, double alpha, FILE *out
 
     for (int i = 0; i < n_process; i++) {
         for (int j = 0; j < processes[i].numBursts; j++) {
-            if (processes[i].cpu_bound) {
-                io_bound_total_burst_time += processes[i].cpu_io_bursts[j][0];
+            if (processes[i].type) {
+                io_bound_total_burst_time += processes[i].bursts[j][0];
                 io_bound_burst_count++;
             } else {
-                cpu_bound_total_burst_time += processes[i].cpu_io_bursts[j][0];
+                cpu_bound_total_burst_time += processes[i].bursts[j][0];
                 cpu_bound_burst_count++;
             }
         }
@@ -258,7 +258,7 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
         op_queue_size++;
         op_queue = realloc(op_queue, op_queue_size * sizeof(Operation));
         op_queue[op_queue_size - 1].type = ARRIVE;
-        op_queue[op_queue_size - 1].time = processes[i].arrival;
+        op_queue[op_queue_size - 1].time = processes[i].arrivalTime;
         op_queue[op_queue_size - 1].process = &processes[i];
     }
 
@@ -303,10 +303,10 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                     printf("time %ums: Process %s (tau %ums) completed I/O; added to ready queue ", time, op.process->id, op.process->tau);
                 }
                 print_queue(ready_queue, ready_queue_size);
-                op.process->ready_queue_add_time = time;
+                op.process->readyQueueAddTime = time;
 
                 // Check for preemption
-                if (cpu_busy && current_process && current_process->remaining_time > op.process->tau) {
+                if (cpu_busy && current_process && current_process->remainingTime > op.process->tau) {
                     printf("time %ums: Process %s (tau %ums) will preempt %s ", time, op.process->id, op.process->tau, current_process->id);
                     print_queue(ready_queue, ready_queue_size);
 
@@ -321,7 +321,7 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                     ready_queue[ready_queue_size - 1] = current_process;
                     current_process = NULL;
 
-                    if (current_process->cpu_bound) {
+                    if (current_process->type) {
                         cpu_bound_preemptions++;
                     } else {
                         io_bound_preemptions++;
@@ -340,15 +340,15 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                 op_queue[op_queue_size - 1].time = time + (t_cs / 2);
                 op_queue[op_queue_size - 1].process = current_process;
 
-                if (current_process->cpu_bound) {
-                    cpu_bound_total_wait_time += time - current_process->ready_queue_add_time;
+                if (current_process->type) {
+                    cpu_bound_total_wait_time += time - current_process->readyQueueAddTime;
                 } else {
-                    io_bound_total_wait_time += time - current_process->ready_queue_add_time;
+                    io_bound_total_wait_time += time - current_process->readyQueueAddTime;
                 }
                 break;
 
             case BURST: {
-                unsigned int burst_time = current_process->remaining_time;
+                unsigned int burst_time = current_process->remainingTime;
                 printf("time %ums: Process %s (tau %ums) started using the CPU for %ums burst ", time, current_process->id, current_process->tau, burst_time);
                 print_queue(ready_queue, ready_queue_size);
 
@@ -357,11 +357,11 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                 op_queue[op_queue_size - 1].type = EXPIRE;
                 op_queue[op_queue_size - 1].time = time + burst_time;
                 op_queue[op_queue_size - 1].process = current_process;
-                current_process->current_burst_elapsed += burst_time;
+                current_process->currentBurstElapsed += burst_time;
 
                 cpu_time += burst_time;
 
-                if (current_process->cpu_bound) {
+                if (current_process->type) {
                     cpu_bound_cs_count++;
                 } else {
                     io_bound_cs_count++;
@@ -371,21 +371,21 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
 
             case EXPIRE: {
                 cpu_busy = false;
-                unsigned int actual_burst_time = time - current_process->burst_start_time;
+                unsigned int actual_burst_time = time - current_process->burstStartTime;
                 unsigned int old_tau = current_process->tau;
 
-                if (current_process->index >= current_process->numBursts - 1) {
+                if (current_process->burstIndex >= current_process->numBursts - 1) {
                     printf("time %ums: Process %s terminated ", time, current_process->id);
                     print_queue(ready_queue, ready_queue_size);
                 } else {
                     current_process->tau = ceil(alpha * actual_burst_time + (1.0 - alpha) * old_tau);
-                    printf("time %ums: Process %s (tau %ums) completed a CPU burst; %lu bursts to go ", time, current_process->id, old_tau, current_process->numBursts - current_process->index - 1);
+                    printf("time %ums: Process %s (tau %ums) completed a CPU burst; %lu bursts to go ", time, current_process->id, old_tau, current_process->numBursts - current_process->burstIndex - 1);
                     print_queue(ready_queue, ready_queue_size);
 
                     printf("time %ums: Recalculated tau for process %s: old tau %ums ==> new tau %ums ", time, current_process->id, old_tau, current_process->tau);
                     print_queue(ready_queue, ready_queue_size);
 
-                    unsigned int unblock_time = time + current_process->cpu_io_bursts[current_process->index][1] + (t_cs / 2);
+                    unsigned int unblock_time = time + current_process->bursts[current_process->burstIndex][1] + (t_cs / 2);
                     op_queue_size++;
                     op_queue = realloc(op_queue, op_queue_size * sizeof(Operation));
                     op_queue[op_queue_size - 1].type = IO_END;
@@ -393,8 +393,8 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
                     op_queue[op_queue_size - 1].process = current_process;
                 }
 
-                current_process->current_burst_elapsed = 0;
-                current_process->index++;
+                current_process->currentBurstElapsed = 0;
+                current_process->burstIndex++;
                 time += t_cs / 2;
                 break;
             }
@@ -416,11 +416,11 @@ void srt(Process *processes, int n_process, double t_cs, double alpha, FILE *out
 
     for (int i = 0; i < n_process; i++) {
         for (int j = 0; j < processes[i].numBursts; j++) {
-            if (processes[i].cpu_bound) {
-                io_bound_total_burst_time += processes[i].cpu_io_bursts[j][0];
+            if (processes[i].type) {
+                io_bound_total_burst_time += processes[i].bursts[j][0];
                 io_bound_burst_count++;
             } else {
-                cpu_bound_total_burst_time += processes[i].cpu_io_bursts[j][0];
+                cpu_bound_total_burst_time += processes[i].bursts[j][0];
                 cpu_bound_burst_count++;
             }
         }
