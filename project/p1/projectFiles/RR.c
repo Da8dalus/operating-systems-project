@@ -366,13 +366,14 @@ void RR(Process *givenProcesses, int n_process, int tcs, int timeslice, FILE *ou
                 //at the index of cpu bursts decrement by time slice
                 if(*(*(cpu_bursts + current_process->index) + 0) > current_process->time_slice){
                     *(*(cpu_bursts + current_process->index) + 0) -= timeslice;
+                }
                 //time_slice restarts
                     current_process->time_slice = timeslice;
                 //time_tcs if other in queue
                     if(queue_size > 0){
                         queue->time_tcs += tcs/2 + 1;
                     }
-                }
+                
                 //
                 printf("time %dms: Time slice expired; Process %s requeued with %dms remaining\n", time, current_process->process->id, *(*(current_process->cpu_io_bursts_copy + current_process->index) + 0));
 
